@@ -1,0 +1,13 @@
+azure-identity
+azure-purview-catalog
+pyapacheatlas
+requests
+jupyter
+azure-identity
+azure-purview-scanning
+azure-purview-administration
+azure-purview-catalog
+azure-purview-account
+azure-core
+azure-mgmt-resource
+azure-mgmt-purview
