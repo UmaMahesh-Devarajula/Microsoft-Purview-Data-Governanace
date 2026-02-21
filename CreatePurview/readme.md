@@ -86,13 +86,14 @@ createpurview()
 🧾 Input Prompts Overview
 When you execute the script 'create-purview.py', you’ll be asked to enter the following details interactively:
 ![alt text](image-1.png)
-Tenant ID
-Azure Subscription ID
-Service Principal Client ID
-Service Principal Secret Value
-Resource Group Name
-Purview Account Name (must be globally unique)
-Region (e.g., eastus, westus2)
+
+- Tenant ID
+- Azure Subscription ID
+- Service Principal Client ID
+- Service Principal Secret Value
+- Resource Group Name
+- Purview Account Name (must be globally unique)
+- Region (e.g., eastus, westus2)
 
 These inputs are used to authenticate, create the resource group (if needed), and provision the Purview account.
 
@@ -117,4 +118,5 @@ Example output:
 ✅ Purview account created successfully!
 Location: eastus  Name: mypurviewdemo  ID: /subscriptions/xxxx/resourceGroups/demo-rg/providers/Microsoft.Purview/accounts/mypurviewdemo  Tags: {}
 Provisioning state: Succeeded
+
 ```
