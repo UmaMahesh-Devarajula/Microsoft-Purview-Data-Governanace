@@ -14,9 +14,6 @@ rg_location = input("location of data source resource group: ")
 collection_name = input("name of the collection where you want to register the data source: ")
 ds_name = input("a friendly data source name: ")
 
-
-catalog_client = PurviewCatalogClient( endpoint=f"https://{creds['purview_account_name']}.purview.azure.com", credential=credential )
-
 def get_credentials():
 	credentials = ClientSecretCredential(client_id=creds["client_id"], client_secret=creds["client_secret"], tenant_id=creds["tenant_id"])
 	return credentials
