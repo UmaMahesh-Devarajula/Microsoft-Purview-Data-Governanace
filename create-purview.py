@@ -49,20 +49,22 @@ def createpurview():
     purview_resource = Account(identity=identity,sku=sku,location =location)
        
     try:
-        pa = (purview_client.accounts.begin_create_or_update(rg_name, purview_name, purview_resource)).result()
-        print("location:", pa.location, " Microsoft Purview Account Name: ", purview_name, " Id: " , pa.id ," tags: " , pa.tags) 
-    except:
-        print("Error in submitting job to create account")
-        print_tb(pa)
+        pa = purview_client.accounts.begin_create_or_update(rg_name, purview_name, purview_resource).result()
+        print("✅ Purview account created successfully!")
+        print("Location:", pa.location, "Name:", purview_name, "ID:", pa.id, "Tags:", pa.tags) 
+    except Exception as e:
+        print("❌ Error creating account:", e)
+        print_tb(e)
  
-    while (getattr(pa,'provisioning_state')) != "Succeeded" :
-        pa = (purview_client.accounts.get(rg_name, purview_name))  
-        print(getattr(pa,'provisioning_state'))
-        if getattr(pa,'provisioning_state') == "Failed" :
-            print("Error in creating Microsoft Purview account")
+    # Monitor provisioning state
+    while getattr(pa, 'provisioning_state') != "Succeeded":
+        pa = purview_client.accounts.get(rg_name, purview_name)  
+        print("Provisioning state:", getattr(pa, 'provisioning_state'))
+        if getattr(pa, 'provisioning_state') == "Failed":
+            print("❌ Account creation failed")
             break
         time.sleep(30)    
 
-# Start the main method
+# Run script
 createpurview()
 
