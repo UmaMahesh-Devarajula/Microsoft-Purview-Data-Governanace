@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 """
-purview_scan_automation.py
+create-scan.py
 
-Interactive tool to:
-- create/replace Purview credentials (PUT /scan/credentials/{credentialName})
-- create/replace Key Vault connections (PUT /scan/azureKeyVaults/{azureKeyVaultName})
-- create/replace scans (PUT /scan/datasources/{ds}/scans/{scan})
-- run scans (POST ...:run) and poll run status (GET .../runs/{runId})
-- log scan config + run details to reconciled CSV and JSON
-- generate backup scripts: {scanName}-scan.py and {credentialName}-credential.py
-- read logs to fetch scan details and re-run scans
+Rebuilt Purview scanning automation:
+- Create/replace credentials and Key Vault connections
+- Create/replace scans for registered datasources
+- Start scan runs, poll status, log to CSV/JSON
+- Reconcile existing CSV headers (preserve rows, merge new columns)
+- Generate backup scripts: {scanName}-scan.py and {credentialName}-credential.py
+- Detailed debug logging for HTTP requests/responses to help diagnose API errors
 
 Requirements:
 - pip install azure-identity requests
 - authenticate() in authenticate.py returning dict:
   { "client_id", "client_secret", "tenant_id", "purview_account_name" }
-
-Notes:
-- Uses Purview scanning data-plane REST API (api-version 2023-09-01).
-- Credential and Key Vault request/response shapes follow Purview scanning dataplane docs.
+- Ensure the service principal has Purview scanning permissions and Key Vault access as needed.
 """
 import os
 import json
@@ -56,17 +52,45 @@ def get_access_token() -> str:
     return token.token
 
 def call_purview(method: str, path: str, token: str, params: Dict[str, str] = None, body: Any = None, timeout: int = 120) -> Any:
+    """
+    Centralized HTTP call with verbose debug output to help diagnose API issues.
+    """
     url = purview_scan_endpoint().rstrip("/") + path
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
+    # Debug: request summary
+    print("DEBUG: Purview request ->", method, url)
+    if params:
+        print("DEBUG: params ->", params)
+    if body is not None:
+        try:
+            print("DEBUG: body ->", json.dumps(body, indent=2))
+        except Exception:
+            print("DEBUG: body ->", str(body))
     resp = requests.request(method, url, headers=headers, params=params, json=body, timeout=timeout)
+    # Debug: response summary
+    print("DEBUG: HTTP status:", resp.status_code)
+    print("DEBUG: response text:", resp.text)
+    try:
+        req = resp.request
+        print("DEBUG: request url:", req.url)
+        print("DEBUG: request headers:", dict(req.headers))
+        if req.body:
+            # req.body may be bytes or str
+            try:
+                print("DEBUG: request body (raw):", req.body.decode() if isinstance(req.body, bytes) else req.body)
+            except Exception:
+                print("DEBUG: request body (raw):", str(req.body))
+    except Exception:
+        pass
     try:
         data = resp.json()
     except ValueError:
         data = {"raw_text": resp.text}
     if not resp.ok:
+        # Raise with full response text for easier debugging
         raise RuntimeError(f"Purview API error {resp.status_code}: {resp.text}")
     return data
 
@@ -275,7 +299,13 @@ def interactive_create_key_vault_connection(token: str) -> Dict[str, Any]:
     body = {"properties": {"baseUrl": base_url}}
     if description:
         body["properties"]["description"] = description
-    resp = create_or_replace_key_vault_connection(token, kv_name, body)
+    # Use strict minimal body shape per docs
+    try:
+        resp = create_or_replace_key_vault_connection(token, kv_name, body)
+    except Exception as e:
+        print("Key Vault creation failed:", e)
+        # Re-raise to surface debug info from call_purview
+        raise
     record = {"kv_name": kv_name, "baseUrl": base_url, "description": description, "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
     append_csv_record(CRED_CSV, record, ["kv_name", "baseUrl", "description", "timestamp"])
     append_json_log(os.path.join(os.getcwd(), "keyvaults_log.json"), record)
@@ -298,6 +328,7 @@ def interactive_build_scan_body(datasource_type: str) -> Dict[str, Any]:
         "scanRuleset": {},
         "scanTrigger": {},
         "scanLevel": "Full",
+        # reference credential by name
         "credentials": {"referenceName": credential_ref}
     }
     if "adls" in datasource_type.lower() or "storage" in datasource_type.lower():
@@ -321,9 +352,6 @@ def fetch_scan_entries_from_csv(csv_path: str) -> List[Dict[str, str]]:
         return list(reader)
 
 def run_scans_from_log():
-    """
-    Read scans_log.csv, for each entry attempt to run the scan and update the log with runId/status.
-    """
     token = get_access_token()
     entries = fetch_scan_entries_from_csv(CSV_FILE)
     if not entries:
@@ -371,7 +399,11 @@ def main():
         if choice == "1":
             interactive_create_credential(token)
         elif choice == "2":
-            interactive_create_key_vault_connection(token)
+            try:
+                interactive_create_key_vault_connection(token)
+            except Exception as e:
+                # call_purview already printed debug; surface a short message
+                print("Key Vault creation failed. See debug output above for details.")
         elif choice == "3":
             datasource_name = input("Enter datasource referenceName (as registered in Purview): ").strip()
             scan_name = input("Enter scan name: ").strip()
