@@ -157,6 +157,16 @@ def build_payload(source_type: str, props: Dict[str, str]) -> Dict:
         properties.update({
             "awsAccountId": props.get("awsAccount_id"),
         })
+    elif source_type == "AzureSynapseAnalytics":
+        properties.update({
+            "dedicatedSqlEndpoint": props.get("dedicated_SqlEndpoint", ""),
+            "serverlessSqlEndpoint": props.get("serverless_SqlEndpoint", ""),
+            "location": props.get("location", ""),
+            "resourceGroup": props.get("resource_group", ""),
+            "resourceId": props.get("resource_id", ""),
+            "resourceName": props.get("resource_name", ""),
+            "subscriptionId": props.get("subscription_id", "")
+        })
     elif source_type == "AzureStorage":
         properties.update({
             "endpoint": props.get("endpoint", ""),
