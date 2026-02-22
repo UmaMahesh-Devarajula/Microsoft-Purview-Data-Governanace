@@ -444,6 +444,11 @@ def interactive_build_scan_body(endpoint: str, token: str, datasource_type: str)
         if root_path:
             props["scanRuleset"]["scanPaths"] = [root_path]
 
+    # Add collection reference 
+    collection_name = input("Enter collection name (Purview collection reference): ").strip() 
+    if collection_name: 
+        props["collection"] = {"referenceName": collection_name}
+
     scan_body = {
         "kind": f"{datasource_type}Credential",
         "properties": props
