@@ -12,19 +12,19 @@ CSV_FILE = "datasources.csv"
 SOURCE_TYPES = {
     "AdlsGen2": {
         "kind": "AdlsGen2",
-        "properties": ["resource_id", "rg_location"]
+        "properties": ["endpoint", "location", "resource_group", "resource_id", "resource_name", "subscription_id"]
     },
     "AzureStorage": {
         "kind": "AzureStorage",
-        "properties": ["resource_id", "rg_location"]
+        "properties": ["endpoint", "location", "resource_group", "resource_id", "resource_name", "subscription_id"]
     },
     "AzureSqlDatabase": {
         "kind": "AzureSqlDatabase",
-        "properties": ["server_endpoint", "resource_id"]
+        "properties": ["server_endpoint", "resource_id", "subscription_id", "resource_group", "resource_name", "location"]
     },
     "AzureCosmosDb": {
         "kind": "AzureCosmosDb",
-        "properties": ["account_name", "resource_id"]
+        "properties": ["account_uri", "location", "resource_group", "resource_id", "resource_name", "subscription_id"]
     },
     "SqlServer": {
         "kind": "SqlServer",
@@ -42,7 +42,6 @@ SOURCE_TYPES = {
         "kind": "SapS4Hana",
         "properties": ["application_server", "system_number"]
     }
-    # Extend with Snowflake, AmazonS3, PostgreSQL, MySQL, etc.
 }
 
 COMMON_PROPERTIES = ["ds_name", "collection_name"]
@@ -58,22 +57,44 @@ def build_payload(source_type, props):
     kind = SOURCE_TYPES[source_type]["kind"]
     properties = {}
 
-    if source_type in ["AdlsGen2", "AzureStorage"]:
+    if source_type == "AdlsGen2":
         properties = {
+            "endpoint": props["endpoint"],
+            "location": props["location"],
+            "resourceGroup": props["resource_group"],
             "resourceId": props["resource_id"],
-            "location": props["rg_location"]
+            "resourceName": props["resource_name"],
+            "subscriptionId": props["subscription_id"]
+        }
+
+    elif source_type == "AzureStorage":
+        properties = {
+            "endpoint": props["endpoint"],
+            "location": props["location"],
+            "resourceGroup": props["resource_group"],
+            "resourceId": props["resource_id"],
+            "resourceName": props["resource_name"],
+            "subscriptionId": props["subscription_id"]
         }
 
     elif source_type == "AzureSqlDatabase":
         properties = {
             "serverEndpoint": props["server_endpoint"],
-            "resourceId": props["resource_id"]
+            "resourceId": props["resource_id"],
+            "subscriptionId": props["subscription_id"],
+            "resourceGroup": props["resource_group"],
+            "resourceName": props["resource_name"],
+            "location": props["location"]
         }
 
     elif source_type == "AzureCosmosDb":
         properties = {
-            "accountName": props["account_name"],
-            "resourceId": props["resource_id"]
+            "accountUri": props["account_uri"],
+            "location": props["location"],
+            "resourceGroup": props["resource_group"],
+            "resourceId": props["resource_id"],
+            "resourceName": props["resource_name"],
+            "subscriptionId": props["subscription_id"]
         }
 
     elif source_type == "SqlServer":
