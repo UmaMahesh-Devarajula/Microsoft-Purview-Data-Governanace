@@ -233,7 +233,7 @@ def get_token():
 
 def main():
     token = get_token()
-    endpoint = f"https://{{creds['purview_account_name']}}.scan.purview.azure.com"
+    endpoint = f"https://{{creds['purview_account_name']}}.purview.azure.com"
     path = f"/scan/datasources/{datasource_name}/scans/{scan_name}"
     url = endpoint.rstrip("/") + path + "?api-version={API_VERSION}"
     headers = {{"Authorization": f"Bearer {{token}}", "Content-Type": "application/json"}}
