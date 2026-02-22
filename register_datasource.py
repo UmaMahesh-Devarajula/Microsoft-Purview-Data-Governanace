@@ -8,7 +8,7 @@ from authenticate import authenticate
 BACKUP_DIR = "backup-datasources"
 CSV_FILE = "datasources.csv"
 
-# Supported source types and required properties
+# Supported source types and required properties (per Microsoft docs)
 SOURCE_TYPES = {
     "AdlsGen2": {
         "kind": "AdlsGen2",
@@ -45,7 +45,7 @@ SOURCE_TYPES = {
     # Extend with Snowflake, AmazonS3, PostgreSQL, MySQL, etc.
 }
 
-COMMON_PROPERTIES = ["ds_name", "domain_name", "collection_name"]
+COMMON_PROPERTIES = ["ds_name", "collection_name"]
 
 def get_credentials(config):
     return ClientSecretCredential(
