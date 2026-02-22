@@ -68,7 +68,7 @@ except ValueError as e:
 
 collection_list = admin_client.collections.list_collections()
 for collection in collection_list:
-	if collection["friendlyName"].lower() == COMMON_PROPERTIES["collection_name"].lower():
+	if collection["friendlyName"].lower() == COMMON_PROPERTIES[1].lower():
 		collection_name = collection["name"]
 
 def build_payload(source_type, props):
@@ -223,7 +223,7 @@ except ValueError as e:
 
 collection_list = admin_client.collections.list_collections()
 for collection in collection_list:
-	if collection["friendlyName"].lower() == COMMON_PROPERTIES["collection_name"].lower():
+	if collection["friendlyName"].lower() == COMMON_PROPERTIES[1].lower():
 		collection_name = collection["name"]
 def recreate_datasource():
     credentials = get_credentials()
