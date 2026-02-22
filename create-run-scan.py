@@ -38,7 +38,7 @@ def trigger_adls_scan():
     scanning_client = PurviewScanningClient(endpoint=purview_endpoint, credential=credentials)
 
     scan_payload = {
-        "dataSourceName": "adlsgen2",
+        "dataSourceName": ds_name,
         "kind": "AdlsGen2Msi",
         "properties": {
             "scanRulesetName": "AdlsGen2",
