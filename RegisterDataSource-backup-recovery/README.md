@@ -77,9 +77,6 @@ Enter ds_name: AzSqlDb
 Enter collection_name: Silver
 Enter server_endpoint: xxxx.database.windows.net
 Enter resource_id: /subscriptions/<subId>/resourceGroups/RG/providers/Microsoft.Sql/servers/xxxx
-Enter subscription_id: <subId>
-Enter resource_group: RG
-Enter resource_name: xxxx
 Enter location: westus2
 ```
 
