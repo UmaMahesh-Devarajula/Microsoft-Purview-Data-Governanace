@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
 """
-create-scan.py (normalized endpoint + validation)
+create-scan.py
 
-- Normalizes purview_account_name from authenticate()
-- Validates scanning endpoint before dataplane calls
-- Prompts to override if normalization fails
-- Implements create/replace credentials, key vault connections, scans, run, logging, backups
+Purview scanning automation using endpoint:
+  https://{purview_account_name}.purview.azure.com/scan
+
+Features:
+- Normalize and validate scanning endpoint
+- Create/replace Key Vault connections
+- Create/replace credentials (SqlAuth uses Key Vault secret references)
+- Create/replace scans, run scans, poll run status
+- Reconcile CSV headers and log to CSV/JSON
+- Generate backup scripts for credentials and scans
+- Verbose debug output for HTTP requests/responses
+
+Requirements:
+- pip install azure-identity requests
+- authenticate() in authenticate.py returning dict:
+  { "client_id", "client_secret", "tenant_id", "purview_account_name" }
 """
 import os
 import json
@@ -28,46 +40,42 @@ CRED_JSON = os.path.join(os.getcwd(), "credentials_log.json")
 creds = authenticate()
 
 # ---------------------------
-# Endpoint normalization & validation
+# Endpoint normalization & validation (uses .purview.azure.com/scan)
 # ---------------------------
 def normalize_account_name(raw: str) -> str:
-    """
-    Normalize various inputs into the Purview account name (host prefix).
-    Accepts:
-      - 'purview09'
-      - 'purview09api'
-      - 'https://purview09.scan.purview.azure.com'
-      - 'purview09.scan.purview.azure.com'
-      - 'https://purview09api.scan.purview.azure.com'
-    Returns the host prefix like 'purview09' or 'purview09api' depending on input.
-    Heuristics:
-      - If input contains '.scan.purview.azure.com', strip that and any scheme.
-      - If input contains '/', strip scheme and path.
-      - If input ends with '-api' or 'api' and that is not desired, user will be prompted to confirm.
-    """
     s = raw.strip()
     # remove scheme
     if s.startswith("http://") or s.startswith("https://"):
         s = s.split("://", 1)[1]
     # remove path
     s = s.split("/", 1)[0]
-    # if contains .scan.purview.azure.com, strip that suffix
-    suffix = ".scan.purview.azure.com"
-    if s.endswith(suffix):
-        s = s[: -len(suffix)]
-    # if user accidentally provided full domain like purview09api.scan..., s becomes 'purview09api'
-    # return the remaining host prefix
+    # if contains .purview.azure.com or .scan.purview.azure.com, strip suffixes
+    if s.endswith(".purview.azure.com"):
+        s = s[: -len(".purview.azure.com")]
+    if s.endswith(".scan.purview.azure.com"):
+        s = s[: -len(".scan.purview.azure.com")]
+    # return remaining host prefix
     return s
 
 def scanning_endpoint_for(account_name: str) -> str:
-    return f"https://{account_name}.scan.purview.azure.com"
+    # Use the requested pattern: https://{account}.purview.azure.com/scan
+    return f"https://{account_name}.purview.azure.com/scan"
+
+def get_access_token_for(creds_local: Dict[str, str]) -> str:
+    credential = ClientSecretCredential(
+        client_id=creds_local["client_id"],
+        client_secret=creds_local["client_secret"],
+        tenant_id=creds_local["tenant_id"]
+    )
+    token = credential.get_token("https://purview.azure.net/.default")
+    return token.token
 
 def validate_scanning_endpoint(endpoint: str, token: str) -> bool:
     """
-    Try a lightweight GET to /scan/azureKeyVaults to confirm the dataplane endpoint is reachable.
-    Returns True if we get a 200 or 204 or a structured response; False otherwise.
+    Validate by calling GET {endpoint}/azureKeyVaults?api-version=...
+    (Note: endpoint already includes /scan)
     """
-    url = endpoint.rstrip("/") + "/scan/azureKeyVaults"
+    url = endpoint.rstrip("/") + "/azureKeyVaults"
     params = {"api-version": API_VERSION}
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     try:
@@ -79,51 +87,40 @@ def validate_scanning_endpoint(endpoint: str, token: str) -> bool:
         print("DEBUG: validation GET exception:", repr(e))
         return False
 
-def resolve_and_confirm_endpoint(creds: Dict[str, str]) -> str:
-    """
-    Normalize account name from creds and validate endpoint.
-    If validation fails, prompt user to enter correct account name or full endpoint.
-    """
-    raw = creds.get("purview_account_name", "")
-    candidate = normalize_account_name(raw)
-    endpoint = scanning_endpoint_for(candidate)
-    token = get_access_token(creds)
+def resolve_and_confirm_endpoint(creds_local: Dict[str, str]) -> str:
+    raw = creds_local.get("purview_account_name", "")
+    candidate_prefix = normalize_account_name(raw)
+    endpoint = scanning_endpoint_for(candidate_prefix)
+    token = get_access_token_for(creds_local)
     print("Resolved scanning endpoint:", endpoint)
     ok = validate_scanning_endpoint(endpoint, token)
     if ok:
         print("Endpoint validation succeeded.")
         return endpoint
-    # prompt user to override
     print("Endpoint validation failed for:", endpoint)
     while True:
-        override = input("Enter Purview account name or full scanning endpoint (or press Enter to retry normalization): ").strip()
+        override = input("Enter Purview account name or full scanning endpoint (or press Enter to retry): ").strip()
         if not override:
-            # retry normalization with original raw but allow user to edit creds in authenticate if needed
-            print("Retrying validation with normalized account name again...")
-            ok = validate_scanning_endpoint(endpoint, token)
-            if ok:
+            print("Retrying validation with normalized account name...")
+            token = get_access_token_for(creds_local)
+            if validate_scanning_endpoint(endpoint, token):
                 return endpoint
-            else:
-                print("Still failing. Please provide correct account name or full endpoint.")
-                continue
-        # if user provided full endpoint
-        if override.startswith("http://") or override.startswith("https://") or ".scan.purview.azure.com" in override:
+            print("Still failing. Provide correct account name or full endpoint.")
+            continue
+        # If user provided full endpoint or account name
+        if override.startswith("http://") or override.startswith("https://") or ".purview.azure.com" in override:
             # extract host prefix if possible
-            if override.startswith("http://") or override.startswith("https://"):
-                host = override.split("://", 1)[1].split("/", 1)[0]
-            else:
-                host = override.split("/", 1)[0]
-            if host.endswith(".scan.purview.azure.com"):
-                prefix = host.split(".scan.purview.azure.com", 1)[0]
+            host = override.split("://", 1)[-1].split("/", 1)[0]
+            if host.endswith(".purview.azure.com"):
+                prefix = host.split(".purview.azure.com", 1)[0]
                 endpoint = scanning_endpoint_for(prefix)
             else:
-                # user gave some other endpoint; use as-is
+                # use as-is (if user provided full endpoint including /scan)
                 endpoint = override.rstrip("/")
         else:
-            # user gave account name prefix
             endpoint = scanning_endpoint_for(normalize_account_name(override))
         print("Trying endpoint:", endpoint)
-        token = get_access_token(creds)
+        token = get_access_token_for(creds_local)
         if validate_scanning_endpoint(endpoint, token):
             print("Endpoint validation succeeded.")
             return endpoint
@@ -131,19 +128,7 @@ def resolve_and_confirm_endpoint(creds: Dict[str, str]) -> str:
             print("Validation failed for provided value. Try again or check Purview account name in Azure Portal.")
 
 # ---------------------------
-# Auth helper (uses authenticate())
-# ---------------------------
-def get_access_token(creds_local: Dict[str, str]) -> str:
-    credential = ClientSecretCredential(
-        client_id=creds_local["client_id"],
-        client_secret=creds_local["client_secret"],
-        tenant_id=creds_local["tenant_id"]
-    )
-    token = credential.get_token("https://purview.azure.net/.default")
-    return token.token
-
-# ---------------------------
-# Centralized HTTP call with debug
+# Centralized HTTP call with debug (endpoint includes /scan)
 # ---------------------------
 def call_purview(method: str, endpoint: str, path: str, token: str, params: Dict[str, str] = None, body: Any = None, timeout: int = 120) -> Any:
     url = endpoint.rstrip("/") + path
@@ -231,15 +216,15 @@ def append_json_log(json_path: str, entry: Dict[str, Any]):
         json.dump(logs, f, indent=2, default=str)
 
 # ---------------------------
-# Credential & Key Vault operations (use validated endpoint)
+# Credential & Key Vault operations (endpoint includes /scan)
 # ---------------------------
 def create_or_replace_credential(endpoint: str, token: str, credential_name: str, credential_body: Dict[str, Any]) -> Dict[str, Any]:
-    path = f"/scan/credentials/{credential_name}"
+    path = f"/credentials/{credential_name}"
     params = {"api-version": API_VERSION}
     return call_purview("PUT", endpoint, path, token, params=params, body=credential_body)
 
 def create_or_replace_key_vault_connection(endpoint: str, token: str, kv_name: str, kv_body: Dict[str, Any]) -> Dict[str, Any]:
-    path = f"/scan/azureKeyVaults/{kv_name}"
+    path = f"/azureKeyVaults/{kv_name}"
     params = {"api-version": API_VERSION}
     return call_purview("PUT", endpoint, path, token, params=params, body=kv_body)
 
@@ -259,8 +244,8 @@ def get_token():
 
 def main():
     token = get_token()
-    endpoint = f"https://{{creds['purview_account_name']}}.scan.purview.azure.com"
-    path = "/scan/credentials/{credential_name}"
+    endpoint = f"https://{{creds['purview_account_name']}}.purview.azure.com/scan"
+    path = "/credentials/{credential_name}"
     url = endpoint.rstrip("/") + path + "?api-version={API_VERSION}"
     headers = {{"Authorization": f"Bearer {{token}}", "Content-Type": "application/json"}}
     body = {json.dumps(credential_body, indent=2)}
@@ -276,10 +261,10 @@ if __name__ == "__main__":
     print("Credential backup script created:", filename)
 
 # ---------------------------
-# Scan lifecycle operations (use validated endpoint)
+# Scan lifecycle operations (endpoint includes /scan)
 # ---------------------------
 def ensure_scan_exists(endpoint: str, token: str, datasource_name: str, scan_name: str, scan_body: Dict[str, Any]) -> Dict[str, Any]:
-    get_path = f"/scan/datasources/{datasource_name}/scans/{scan_name}"
+    get_path = f"/datasources/{datasource_name}/scans/{scan_name}"
     params = {"api-version": API_VERSION}
     try:
         scan = call_purview("GET", endpoint, get_path, token, params=params)
@@ -293,14 +278,14 @@ def ensure_scan_exists(endpoint: str, token: str, datasource_name: str, scan_nam
         return created
 
 def run_scan(endpoint: str, token: str, datasource_name: str, scan_name: str, scan_level: Optional[str] = None) -> Dict[str, Any]:
-    path = f"/scan/datasources/{datasource_name}/scans/{scan_name}:run"
+    path = f"/datasources/{datasource_name}/scans/{scan_name}:run"
     params = {"api-version": API_VERSION}
     if scan_level:
         params["scanLevel"] = scan_level
     return call_purview("POST", endpoint, path, token, params=params, body={})
 
 def get_scan_run_status(endpoint: str, token: str, datasource_name: str, scan_name: str, run_id: str) -> Dict[str, Any]:
-    path = f"/scan/datasources/{datasource_name}/scans/{scan_name}/runs/{run_id}"
+    path = f"/datasources/{datasource_name}/scans/{scan_name}/runs/{run_id}"
     params = {"api-version": API_VERSION}
     return call_purview("GET", endpoint, path, token, params=params)
 
@@ -320,8 +305,8 @@ def get_token():
 
 def main():
     token = get_token()
-    endpoint = f"https://{{creds['purview_account_name']}}.scan.purview.azure.com"
-    path = f"/scan/datasources/{datasource_name}/scans/{scan_name}"
+    endpoint = f"https://{{creds['purview_account_name']}}.purview.azure.com/scan"
+    path = f"/datasources/{datasource_name}/scans/{scan_name}"
     url = endpoint.rstrip("/") + path + "?api-version={API_VERSION}"
     headers = {{"Authorization": f"Bearer {{token}}", "Content-Type": "application/json"}}
     body = {json.dumps(scan_body, indent=2)}
@@ -337,26 +322,58 @@ if __name__ == "__main__":
     print("Backup scan script created:", filename)
 
 # ---------------------------
-# Interactive builders (use validated endpoint)
+# Interactive builders (SqlAuth uses Key Vault secret references)
 # ---------------------------
-def interactive_create_credential(endpoint: str, token: str) -> Dict[str, Any]:
+def interactive_create_credential(endpoint: str, token: str) -> Optional[Dict[str, Any]]:
     print("Create or replace a Purview credential.")
     name = input("Credential name: ").strip()
     print("Kinds: ServicePrincipal, AccountKey, SqlAuth, ManagedIdentity, BasicAuth, DelegatedAuth")
     kind = input("Choose kind: ").strip()
     properties: Dict[str, Any] = {}
+
     if kind.lower() in ("serviceprincipal", "service principal"):
         properties["tenantId"] = input("Tenant ID: ").strip()
         properties["servicePrincipalId"] = input("Service principal ID: ").strip()
-        secret = input("Service principal secret (leave blank to use Key Vault): ").strip()
+        secret = input("Service principal secret (or leave blank to use Key Vault): ").strip()
         if secret:
             properties["servicePrincipalKey"] = secret
+
     elif kind.lower() in ("accountkey", "account key"):
         properties["typeProperties"] = {"accountKey": input("Account key (or leave blank to use Key Vault): ").strip()}
+
     elif kind.lower() in ("sqlauth", "sql auth"):
-        properties["typeProperties"] = {"user": input("SQL username: ").strip(), "password": input("SQL password: ").strip()}
+        # Enforce Key Vault usage for password
+        print("SqlAuth requires the password to be stored in Key Vault.")
+        username = input("SQL username: ").strip()
+        use_kv = input("Is the password stored in Key Vault? (y/n): ").strip().lower()
+        if use_kv != "y":
+            print("Please store the password in Key Vault first. Example CLI:")
+            print("  az keyvault secret set --vault-name <vault> --name <secretName> --value '<password>'")
+            return None
+        secret_name = input("Key Vault secret name: ").strip()
+        vault_name = input("Key Vault name (e.g., kvx09): ").strip()
+        vault_resource_id = input("Key Vault resourceId (full ARM id): ").strip()
+        if not (secret_name and vault_name and vault_resource_id):
+            print("Missing Key Vault details. Aborting credential creation.")
+            return None
+        properties["credential"] = {
+            "type": "KeyVaultSecret",
+            "secretName": secret_name,
+            "vaultName": vault_name,
+            "vaultResourceId": vault_resource_id
+        }
+        properties["typeProperties"] = {
+            "user": username,
+            "password": {
+                "secretName": secret_name,
+                "vaultName": vault_name,
+                "vaultResourceId": vault_resource_id
+            }
+        }
+
     elif kind.lower() in ("managedidentity", "managed identity"):
         properties["typeProperties"] = {"resourceId": input("User-assigned managed identity resourceId (optional): ").strip()}
+
     else:
         raw = input("Paste credential properties JSON (or leave blank): ").strip()
         if raw:
@@ -364,8 +381,14 @@ def interactive_create_credential(endpoint: str, token: str) -> Dict[str, Any]:
                 properties = json.loads(raw)
             except Exception:
                 properties = {"raw": raw}
+
     body = {"kind": kind, "properties": properties}
-    resp = create_or_replace_credential(endpoint, token, name, body)
+    try:
+        resp = create_or_replace_credential(endpoint, token, name, body)
+    except Exception as e:
+        print("Failed to create credential:", e)
+        return None
+
     generate_credential_backup_script(name, body)
     record = {
         "credential_name": name,
@@ -378,7 +401,7 @@ def interactive_create_credential(endpoint: str, token: str) -> Dict[str, Any]:
     print("Credential created:", resp.get("name", name))
     return resp
 
-def interactive_create_key_vault_connection(endpoint: str, token: str) -> Dict[str, Any]:
+def interactive_create_key_vault_connection(endpoint: str, token: str) -> Optional[Dict[str, Any]]:
     print("Create or replace an Azure Key Vault connection.")
     kv_name = input("Key Vault connection name: ").strip()
     base_url = input("Key Vault baseUrl (https://<name>.vault.azure.net/): ").strip()
@@ -390,7 +413,7 @@ def interactive_create_key_vault_connection(endpoint: str, token: str) -> Dict[s
         resp = create_or_replace_key_vault_connection(endpoint, token, kv_name, body)
     except Exception as e:
         print("Key Vault creation failed:", e)
-        raise
+        return None
     record = {"kv_name": kv_name, "baseUrl": base_url, "description": description, "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
     append_csv_record(CRED_CSV, record, ["kv_name", "baseUrl", "description", "timestamp"])
     append_json_log(os.path.join(os.getcwd(), "keyvaults_log.json"), record)
@@ -405,6 +428,8 @@ def interactive_build_scan_body(endpoint: str, token: str, datasource_type: str)
         credential_ref = input("Enter credential name: ").strip()
     else:
         cred_resp = interactive_create_credential(endpoint, token)
+        if not cred_resp:
+            raise RuntimeError("Credential creation aborted.")
         credential_ref = cred_resp.get("name") or input("Enter credential name you created: ").strip()
     props: Dict[str, Any] = {
         "scanRulesetName": None,
@@ -473,10 +498,9 @@ def run_scans_from_log(endpoint: str, token: str):
 # Main interactive flow
 # ---------------------------
 def main():
-    # Resolve and validate endpoint
     endpoint = resolve_and_confirm_endpoint(creds)
-    token = get_access_token(creds)
-    print("Purview Scan Automation")
+    token = get_access_token_for(creds)
+    print("Purview Scan Automation (endpoint):", endpoint)
     print("1) Create credential  2) Create Key Vault connection  3) Create/Run scan  4) Run scans from log  5) Exit")
     while True:
         choice = input("Choose action (1/2/3/4/5): ").strip()
@@ -485,15 +509,19 @@ def main():
         elif choice == "2":
             try:
                 interactive_create_key_vault_connection(endpoint, token)
-            except Exception as e:
-                print("Key Vault creation failed. See debug output above for details.")
+            except Exception:
+                print("Key Vault creation failed. See debug output above.")
         elif choice == "3":
             datasource_name = input("Enter datasource referenceName (as registered in Purview): ").strip()
             scan_name = input("Enter scan name: ").strip()
             datasource_type = input("Enter datasource type (AdlsGen2, AzureSqlDatabase, AzureStorage, etc.): ").strip()
             scan_level = input("Enter scan level (Full/Incremental) or leave blank: ").strip() or None
             schedule = input("Enter schedule (cron or description) or leave blank: ").strip()
-            scan_body = interactive_build_scan_body(endpoint, token, datasource_type)
+            try:
+                scan_body = interactive_build_scan_body(endpoint, token, datasource_type)
+            except Exception as e:
+                print("Scan body build failed:", e)
+                continue
             if schedule:
                 scan_body.setdefault("properties", {}).setdefault("scanTrigger", {})["schedule"] = schedule
             try:
