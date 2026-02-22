@@ -8,7 +8,7 @@ from authenticate import authenticate
 
 BACKUP_DIR = "backup-datasources"
 CSV_FILE = "datasources.csv" 
-
+creds = authenticate() 
 # Supported source types and required properties (per Microsoft docs)
 SOURCE_TYPES = {
     "AdlsGen2": {
@@ -201,6 +201,7 @@ from azure.purview.scanning import PurviewScanningClient
 from azure.purview.administration.account import PurviewAccountClient
 from authenticate import authenticate
 
+creds = authenticate() 
 def get_credentials():
 	credentials = ClientSecretCredential(client_id=creds["client_id"], client_secret=creds["client_secret"], tenant_id=creds["tenant_id"])
 	return credentials
@@ -234,7 +235,7 @@ def recreate_datasource():
     print("✅ Data source recreated:", response)
 
 if __name__ == "__main__":
-    creds = authenticate() 
+    #creds = authenticate() 
     recreate_datasource()
 '''
     with open(filename, "w") as f:
@@ -242,5 +243,5 @@ if __name__ == "__main__":
     print(f"📂 Backup script created: {filename}")
 
 if __name__ == "__main__":
-    creds = authenticate() 
+    #creds = authenticate() 
     register_datasource()
