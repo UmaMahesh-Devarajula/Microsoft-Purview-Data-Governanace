@@ -33,6 +33,10 @@ SOURCE_TYPES = {
         "kind": "AzureCosmosDb",
         "properties": ["account_uri", "resource_id", "location"]
     },
+    "Fabric": {
+        "kind": "Fabric",
+        "properties": ["tenant"]
+    },
     "SqlServer": {
         "kind": "SqlServer",
         "properties": ["server_endpoint"]
@@ -151,6 +155,10 @@ def build_payload(source_type: str, props: Dict[str, str]) -> Dict:
             "resourceId": props.get("resource_id", ""),
             "resourceName": props.get("resource_name", ""),
             "subscriptionId": props.get("subscription_id", "")
+        })
+    elif source_type == "Fabric":
+        properties.update({
+            "tenant": props.get("tenant", ""),
         })
 
     elif source_type == "SqlServer":
