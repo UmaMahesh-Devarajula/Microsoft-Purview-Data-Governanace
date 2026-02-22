@@ -47,12 +47,9 @@ SOURCE_TYPES = {
 
 COMMON_PROPERTIES = ["ds_name", "collection_name"]
 
-def get_credentials(config):
-    return ClientSecretCredential(
-        tenant_id=config["tenant_id"],
-        client_id=config["client_id"],
-        client_secret=config["client_secret"]
-    )
+def get_credentials():
+	credentials = ClientSecretCredential(client_id=creds["client_id"], client_secret=creds["client_secret"], tenant_id=creds["tenant_id"])
+	return credentials
 
 def build_payload(source_type, props):
     kind = SOURCE_TYPES[source_type]["kind"]
@@ -155,7 +152,7 @@ def register_datasource():
 
     payload = build_payload(source_type, props)
 
-    credential = get_credentials(creds)
+    credentials = get_credentials()
     client = PurviewAccountClient(endpoint=purview_endpoint, credential=credentials, logging_enable=True)
 
     try:
@@ -185,17 +182,18 @@ def generate_backup_script(source_type, props, config):
 
     script = f'''from azure.identity import ClientSecretCredential
 from azure.purview.scanning import PurviewScanningClient
+from azure.purview.administration.account import PurviewAccountClient
 from authenticate import authenticate
+
+def get_credentials():
+	credentials = ClientSecretCredential(client_id=creds["client_id"], client_secret=creds["client_secret"], tenant_id=creds["tenant_id"])
+	return credentials
 
 def recreate_datasource():
     creds = authenticate()
-    credential = ClientSecretCredential(
-        tenant_id=creds["tenant_id"],
-        client_id=creds["client_id"],
-        client_secret=creds["client_secret"]
-    )
-    endpoint = f"https://{{creds['purview_account_name']}}.purview.azure.com"
-    client = PurviewScanningClient(endpoint=endpoint, credential=credential)
+    purview_endpoint = f"https://{{creds['purview_account_name']}}.purview.azure.com"
+    credentials = get_credentials()
+    client = PurviewAccountClient(endpoint=purview_endpoint, credential=credentials, logging_enable=True)
 
     data_source = {payload}
 
