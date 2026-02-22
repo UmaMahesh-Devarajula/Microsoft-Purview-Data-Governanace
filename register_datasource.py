@@ -41,6 +41,10 @@ SOURCE_TYPES = {
         "kind": "AmazonSql",
         "properties": ["server_Endpoint", "Port"]
     },
+    "AmazonRedShift": {
+        "kind": "AmazonRedShift",
+        "properties": ["Host", "Port"]
+    },
     "AdlsGen2": {
         "kind": "AdlsGen2",
         "properties": ["endpoint", "resource_id", "location"]
@@ -183,6 +187,11 @@ def build_payload(source_type: str, props: Dict[str, str]) -> Dict:
     elif source_type == "AmazonSql":
         properties.update({
             "serverEndpoint": props.get("server_Endpoint", ""),
+            "port": props.get("Port", "")
+        })
+    elif source_type == "AmazonRedShift":
+        properties.update({
+            "host": props.get("Host", ""),
             "port": props.get("Port", "")
         })
     elif source_type == "AzureStorage":
