@@ -51,10 +51,25 @@ def get_credentials():
 	credentials = ClientSecretCredential(client_id=creds["client_id"], client_secret=creds["client_secret"], tenant_id=creds["tenant_id"])
 	return credentials
 
+def get_purview_client():
+	credentials = get_credentials()
+	client = PurviewScanningClient(endpoint=purview_scan_endpoint, credential=credentials, logging_enable=True)  
+	return client
+
 def get_admin_client():
 	credentials = get_credentials()
-	client = PurviewAccountClient(endpoint=f"https://{creds['purview_account_name']}.purview.azure.com", credential=credentials, logging_enable=True)
+	client = PurviewAccountClient(endpoint=purview_endpoint, credential=credentials, logging_enable=True)
 	return client
+
+try:
+	admin_client = get_admin_client()
+except ValueError as e:
+        print(e)
+
+collection_list = admin_client.collections.list_collections()
+for collection in collection_list:
+	if collection["friendlyName"].lower() == collection_name.lower():
+		collection_name = collection["name"]
 
 def build_payload(source_type, props):
     kind = SOURCE_TYPES[source_type]["kind"]
@@ -157,7 +172,7 @@ def register_datasource():
     payload = build_payload(source_type, props)
 
     credentials = get_credentials()
-    client = get_admin_client()
+    client = get_purview_client()
 
     try:
         response = client.data_sources.create_or_update(props["ds_name"], body=payload)
@@ -193,10 +208,24 @@ def get_credentials():
 	credentials = ClientSecretCredential(client_id=creds["client_id"], client_secret=creds["client_secret"], tenant_id=creds["tenant_id"])
 	return credentials
 
+def get_purview_client():
+	credentials = get_credentials()
+	client = PurviewScanningClient(endpoint=purview_scan_endpoint, credential=credentials, logging_enable=True)  
+	return client
+
 def get_admin_client():
 	credentials = get_credentials()
-	client = PurviewAccountClient(endpoint=f"https://{creds['purview_account_name']}.purview.azure.com", credential=credentials, logging_enable=True)
+	client = PurviewAccountClient(endpoint=purview_endpoint, credential=credentials, logging_enable=True)
 	return client
+
+try:
+	admin_client = get_admin_client()
+except ValueError as e:
+        print(e)
+
+collection_list = admin_client.collections.list_collections()
+for collection in collection_list:
+	if collection["friendlyName"].lower() == collection_name.lower():
 
 def recreate_datasource():
     purview_endpoint = f"https://{{creds['purview_account_name']}}.purview.azure.com"
