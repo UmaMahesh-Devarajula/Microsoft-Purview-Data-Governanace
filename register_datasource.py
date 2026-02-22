@@ -12,6 +12,16 @@ CSV_FILE = os.path.expanduser("~/datasources.csv")  # safer path
 
 creds = authenticate()
 
+# Superset of all possible fields across Azure + non-Azure sources
+CSV_HEADER = [
+    "source_type", "ds_name", "collection_name",
+    "server_endpoint", "account_uri", "endpoint",
+    "resource_id", "subscription_id", "resource_group", "resource_name", "location",
+    "host", "port", "service_name",
+    "application_server", "system_number",
+    "timestamp"
+]
+
 SOURCE_TYPES = {
     "AdlsGen2": {
         "kind": "AdlsGen2",
@@ -94,6 +104,12 @@ def parse_resource_id(resource_id: str):
 def build_payload(source_type, props):
     kind = SOURCE_TYPES[source_type]["kind"]
     properties = {}
+
+    if source_type in ["AdlsGen2", "AzureStorage", "AzureSqlDatabase", "AzureCosmosDb"]:
+        parsed = parse_resource_id(props["resource_id"])
+        props["subscription_id"] = parsed["subscriptionId"]
+        props["resource_group"] = parsed["resourceGroup"]
+        props["resource_name"] = parsed["resourceName"]
 
     if source_type == "AdlsGen2":
         properties.update({
@@ -178,7 +194,6 @@ def register_datasource():
     for prop in SOURCE_TYPES[source_type]["properties"]:
         props[prop] = input(f"Enter {prop}: ")
 
-    # Parse resource_id for Azure sources BEFORE payload + CSV
     if source_type in ["AdlsGen2", "AzureStorage", "AzureSqlDatabase", "AzureCosmosDb"]:
         parsed = parse_resource_id(props["resource_id"])
         props["subscription_id"] = parsed["subscriptionId"]
@@ -201,17 +216,19 @@ def register_datasource():
         print("❌ Error registering data source:", e)
         return
 
-    row = [source_type] + [props[p] for p in COMMON_PROPERTIES + SOURCE_TYPES[source_type]["properties"]] + [datetime.datetime.now()]
-    write_to_csv(row, source_type)
+    write_to_csv(source_type, props)
     generate_backup_script(source_type, props)
 
-def write_to_csv(row, source_type):
-    header = ["source_type"] + COMMON_PROPERTIES + SOURCE_TYPES[source_type]["properties"] + ["timestamp"]
+def write_to_csv(source_type, props):
     file_exists = os.path.exists(CSV_FILE)
     with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+        writer = csv.DictWriter(f, fieldnames=CSV_HEADER)
         if not file_exists:
-            writer.writerow(header)
+            writer.writeheader()
+
+        row = {key: props.get(key, "") for key in CSV_HEADER}
+        row["source_type"] = source_type
+        row["timestamp"] = datetime.datetime.now()
         writer.writerow(row)
 
 def generate_backup_script(source_type, props):
@@ -252,7 +269,3 @@ if __name__ == "__main__":
 '''
     with open(filename, "w", encoding="utf-8") as f:
         f.write(script)
-    print(f"📂 Backup script created: {filename}")
-
-if __name__ == "__main__":
-    register_datasource()
