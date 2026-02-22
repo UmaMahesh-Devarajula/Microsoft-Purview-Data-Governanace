@@ -2,13 +2,13 @@
 """
 create-scan.py
 
-Purview scanning automation with Key Vault connection + credential validation.
+Rebuilt Purview scan automation with robust scanAuthorization handling.
 
-- Validates/creates Key Vault connection in Purview
-- Creates SqlAuth credential referencing Key Vault secret (KeyVaultSecret object)
-- Ensures credential exists before creating scan
-- Creates scan with kind + scanAuthorizationType + scanAuthorization
-- Starts scan run, polls status, logs CSV/JSON, generates backup scripts
+- Endpoint: https://{account}.purview.azure.com/scan
+- Creates Key Vault connections and SqlAuth credentials (KeyVaultSecret)
+- Creates scans and retries with alternative scanAuthorization shapes if needed
+- Starts scan runs, polls status, logs CSV/JSON, generates backup scripts
+- Verbose debug output for HTTP requests/responses
 
 Requirements:
 - pip install azure-identity requests
@@ -36,7 +36,7 @@ CRED_JSON = os.path.join(os.getcwd(), "credentials_log.json")
 creds = authenticate()
 
 # ---------------------------
-# Endpoint helpers (uses https://{account}.purview.azure.com/scan)
+# Endpoint helpers
 # ---------------------------
 def normalize_account_name(raw: str) -> str:
     s = raw.strip()
@@ -65,12 +65,10 @@ def resolve_endpoint(creds_local: Dict[str, str]) -> str:
     candidate = normalize_account_name(creds_local.get("purview_account_name", ""))
     endpoint = scanning_endpoint_for(candidate)
     token = get_access_token_for(creds_local)
-    # quick validation
     url = endpoint.rstrip("/") + "/azureKeyVaults"
     resp = requests.get(url, headers={"Authorization": f"Bearer {token}"}, params={"api-version": API_VERSION}, timeout=10)
     if resp.status_code in (200, 204):
         return endpoint
-    # prompt override
     print("Auto-resolve of scanning endpoint failed. Please enter Purview account name or full endpoint.")
     while True:
         override = input("Purview account name or full endpoint: ").strip()
@@ -204,17 +202,12 @@ def credential_exists(endpoint: str, token: str, credential_name: str) -> bool:
         return False
 
 def create_sqlauth_credential(endpoint: str, token: str) -> Optional[Dict[str, Any]]:
-    """
-    Interactive creation of SqlAuth credential that references a Key Vault secret.
-    Requires the secret to already exist in Key Vault.
-    """
     name = input("Credential name: ").strip()
     username = input("SQL username: ").strip()
     print("SqlAuth requires the password to be stored in Key Vault.")
     secret_name = input("Key Vault secret name (e.g., sql-password-secret): ").strip()
     vault_name = input("Key Vault name (e.g., kvx09): ").strip()
     vault_resource_id = input("Key Vault resourceId (full ARM id): ").strip()
-    # Validate Key Vault connection exists in Purview; if not, offer to create it
     if not key_vault_connection_exists(endpoint, token, vault_name):
         print(f"Key Vault connection '{vault_name}' not found in Purview.")
         create_kv = input("Create Key Vault connection now? (y/n): ").strip().lower()
@@ -230,7 +223,6 @@ def create_sqlauth_credential(endpoint: str, token: str) -> Optional[Dict[str, A
         else:
             print("Please create Key Vault connection in Purview first and retry.")
             return None
-    # Build credential body referencing Key Vault secret
     body = {
         "kind": "SqlAuth",
         "properties": {
@@ -255,7 +247,6 @@ def create_sqlauth_credential(endpoint: str, token: str) -> Optional[Dict[str, A
     except Exception as e:
         print("Failed to create SqlAuth credential:", e)
         return None
-    # backup and log
     generate_credential_backup_script(name, body)
     record = {"credential_name": name, "kind": "SqlAuth", "properties": json.dumps(body["properties"]), "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
     append_csv_record(CRED_CSV, record, ["credential_name", "kind", "properties", "timestamp"])
@@ -293,9 +284,13 @@ if __name__ == "__main__": main()
     print("Credential backup script created:", filename)
 
 # ---------------------------
-# Scan helpers (ensure kind + scanAuthorization)
+# Scan helpers with retry for scanAuthorizationType
 # ---------------------------
-def ensure_scan_exists(endpoint: str, token: str, datasource_name: str, scan_name: str, kind: str, properties: Dict[str, Any]) -> Dict[str, Any]:
+def ensure_scan_exists_with_retries(endpoint: str, token: str, datasource_name: str, scan_name: str, kind: str, properties: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Try to create the scan. If the server returns Scan_InvalidType for the chosen
+    scanAuthorizationType, retry with alternative authorization shapes.
+    """
     get_path = f"/datasources/{datasource_name}/scans/{scan_name}"
     params = {"api-version": API_VERSION}
     try:
@@ -304,11 +299,52 @@ def ensure_scan_exists(endpoint: str, token: str, datasource_name: str, scan_nam
         return scan
     except Exception as e_get:
         print("Scan GET failed or not found, creating. Reason:", repr(e_get))
-        put_path = get_path
-        body = {"kind": kind, "properties": properties}
-        created = call_purview("PUT", endpoint, put_path, token, params=params, body=body)
-        print("Scan created/updated:", created.get("name", scan_name))
-        return created
+
+    # Attempt list of candidate authorization types/shapes.
+    # Order: Credential (generic), SqlAuthentication (explicit), ManagedIdentity
+    # For Credential we expect properties already contains scanAuthorizationType/scanAuthorization
+    candidates = []
+
+    # If user already provided scanAuthorizationType in properties, try it first
+    if "scanAuthorizationType" in properties and "scanAuthorization" in properties:
+        candidates.append(properties)
+    # Candidate 1: Credential (generic)
+    candidates.append({**properties, **{
+        "scanAuthorizationType": "Credential",
+        "scanAuthorization": {"credential": properties.get("scanAuthorization", {}).get("credential", {"referenceName": properties.get("credentials", {}).get("referenceName")})}
+    }})
+    # Candidate 2: SqlAuthentication (explicit)
+    candidates.append({**properties, **{
+        "scanAuthorizationType": "SqlAuthentication",
+        "scanAuthorization": {"sqlAuthentication": {"credential": {"referenceName": properties.get("credentials", {}).get("referenceName")}}}
+    }})
+    # Candidate 3: ManagedIdentity (if user provided managed identity info earlier)
+    if properties.get("scanAuthorization", {}).get("managedIdentity"):
+        candidates.append({**properties, **{
+            "scanAuthorizationType": "ManagedIdentity",
+            "scanAuthorization": {"managedIdentity": properties["scanAuthorization"]["managedIdentity"]}
+        }})
+
+    last_err = None
+    for idx, props_try in enumerate(candidates):
+        body = {"kind": kind, "properties": props_try}
+        try:
+            print(f"Attempting to create scan (attempt {idx+1}) with scanAuthorizationType={props_try.get('scanAuthorizationType')}")
+            created = call_purview("PUT", endpoint, f"/datasources/{datasource_name}/scans/{scan_name}", token, params=params, body=body)
+            print("Scan created/updated:", created.get("name", scan_name))
+            return created
+        except Exception as e:
+            last_err = e
+            # If server returned Scan_InvalidType, continue to next candidate
+            err_text = str(e)
+            if "Scan_InvalidType" in err_text or "Invalid scanAuthorizationType" in err_text:
+                print("Server rejected scanAuthorizationType, trying next candidate...")
+                continue
+            else:
+                # For other errors, stop and raise
+                raise
+    # If we exhausted candidates, raise last error
+    raise last_err
 
 def run_scan(endpoint: str, token: str, datasource_name: str, scan_name: str, scan_level: Optional[str] = None) -> Dict[str, Any]:
     path = f"/datasources/{datasource_name}/scans/{scan_name}:run"
@@ -349,12 +385,11 @@ if __name__ == "__main__": main()
     print("Backup scan script created:", filename)
 
 # ---------------------------
-# Interactive scan body builder (adds scanAuthorization)
+# Interactive builders
 # ---------------------------
 def interactive_build_scan_body(endpoint: str, token: str, datasource_type: str) -> Tuple[str, Dict[str, Any]]:
     print(f"Building scan body for datasource type: {datasource_type}")
     kind = input(f"Enter scan kind (e.g., AzureSqlDatabase, AdlsGen2) [default: {datasource_type}]: ").strip() or datasource_type
-    # choose credential or managed identity
     auth_choice = input("Authorization method: 1) Credential  2) ManagedIdentity  (enter 1 or 2) [default 1]: ").strip() or "1"
     if auth_choice == "1":
         credential_ref = input("Enter existing Purview credential name (must exist): ").strip()
@@ -376,7 +411,9 @@ def interactive_build_scan_body(endpoint: str, token: str, datasource_type: str)
         "scanTrigger": {},
         "scanLevel": "Full",
         "scanAuthorizationType": scan_auth_type,
-        "scanAuthorization": scan_auth
+        "scanAuthorization": scan_auth,
+        # keep credentials reference too (some shapes expect it)
+        "credentials": {"referenceName": scan_auth.get("credential", {}).get("referenceName")} if scan_auth_type == "Credential" else {}
     }
     if "adls" in datasource_type.lower() or "storage" in datasource_type.lower():
         root_path = input("Enter root path to scan (container/folder) or leave blank: ").strip()
@@ -455,7 +492,7 @@ def main():
         elif choice == "3":
             datasource_name = input("Enter datasource referenceName (as registered in Purview): ").strip()
             scan_name = input("Enter scan name: ").strip()
-            datasource_type = input("Enter datasource type (e.g., AzureSqlDatabase, AdlsGen2, AzureStorage): ").strip()
+            datasource_type = input("Enter scan datasource type (e.g., AzureSqlDatabase, AdlsGen2, AzureStorage): ").strip()
             scan_level = input("Enter scan level (Full/Incremental) or leave blank: ").strip() or None
             schedule = input("Enter schedule (cron or description) or leave blank: ").strip()
             try:
@@ -466,7 +503,7 @@ def main():
             if schedule:
                 properties.setdefault("scanTrigger", {})["schedule"] = schedule
             try:
-                scan_resource = ensure_scan_exists(endpoint, token, datasource_name, scan_name, kind, properties)
+                scan_resource = ensure_scan_exists_with_retries(endpoint, token, datasource_name, scan_name, kind, properties)
             except Exception as e:
                 print("Failed to create/ensure scan:", e)
                 continue
