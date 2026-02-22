@@ -377,6 +377,17 @@ def interactive_create_credential(endpoint: str, token: str) -> Dict[str, Any]:
     print("Credential created:", resp.get("name", name))
     return resp
 
+def get_credential_type(endpoint: str, token: str, credential_name: str) -> Optional[str]:
+    path = f"/scan/credentials/{credential_name}"
+    params = {"api-version": API_VERSION}
+    try:
+        resp = call_purview("GET", endpoint, path, token, params=params)
+        # Purview returns {"kind": "...", "properties": {...}}
+        return resp.get("kind")
+    except Exception as e:
+        print("Failed to fetch credential type:", e)
+        return None
+
 def interactive_create_key_vault_connection(endpoint: str, token: str) -> Dict[str, Any]:
     print("Create or replace an Azure Key Vault connection.")
     kv_name = input("Key Vault connection name: ").strip()
@@ -406,13 +417,19 @@ def interactive_build_scan_body(endpoint: str, token: str, datasource_type: str)
         cred_resp = interactive_create_credential(endpoint, token)
         credential_ref = cred_resp.get("name") or input("Enter credential name you created: ").strip()
 
+    # Fetch credentialType from Purview
+    credential_type = get_credential_type(endpoint, token, credential_ref) or "SqlAuth"
+
     props: Dict[str, Any] = {
         "scanRulesetName": None,
         "scanType": "Full",
         "scanRuleset": {},
         "scanTrigger": {},
         "scanLevel": "Full",
-        "credentials": {"referenceName": credential_ref}
+        "credential": {
+            "credentialType": credential_type,
+            "referenceName": credential_ref
+        }
     }
 
     if "adls" in datasource_type.lower() or "storage" in datasource_type.lower():
@@ -425,12 +442,12 @@ def interactive_build_scan_body(endpoint: str, token: str, datasource_type: str)
         if db:
             props["scanRuleset"]["database"] = db
 
-    # Build full scan body with kind = datasourceType + "Credential"
     scan_body = {
         "kind": f"{datasource_type}Credential",
         "properties": props
     }
     return scan_body
+
 
 
 # ---------------------------
