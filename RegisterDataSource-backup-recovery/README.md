@@ -1,6 +1,6 @@
 # Purview Data Source Registeration and backup/recovery Automation
 
-This repository provides a **universal toolkit** for registering data sources in **Microsoft Purview** using the REST API. It automates registration, backup script generation, and logging for multiple source types (Azure and non‑Azure).
+This repository provides a **toolkit** for registering few data sources listed below in **Microsoft Purview** using the REST API. It automates registration, backup script generation, and logging for multiple source types (Azure and non‑Azure).
 
 ---
 
