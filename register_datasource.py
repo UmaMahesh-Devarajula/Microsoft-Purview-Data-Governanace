@@ -15,19 +15,19 @@ creds = authenticate()
 SOURCE_TYPES = {
     "AdlsGen2": {
         "kind": "AdlsGen2",
-        "properties": ["endpoint", "location", "resource_group", "resource_id", "resource_name", "subscription_id"]
+        "properties": ["endpoint", "resource_id", "location"]
     },
     "AzureStorage": {
         "kind": "AzureStorage",
-        "properties": ["endpoint", "location", "resource_group", "resource_id", "resource_name", "subscription_id"]
+        "properties": ["endpoint", "resource_id", "location"]
     },
     "AzureSqlDatabase": {
         "kind": "AzureSqlDatabase",
-        "properties": ["server_endpoint", "resource_id", "subscription_id", "resource_group", "resource_name", "location"]
+        "properties": ["server_endpoint", "resource_id", "location"]
     },
     "AzureCosmosDb": {
         "kind": "AzureCosmosDb",
-        "properties": ["account_uri", "location", "resource_group", "resource_id", "resource_name", "subscription_id"]
+        "properties": ["account_uri", "resource_id", "location"]
     },
     "SqlServer": {
         "kind": "SqlServer",
@@ -78,11 +78,31 @@ def resolve_collection_name(user_collection_name):
     for collection in collection_list:
         if collection["friendlyName"].lower() == user_collection_name.lower():
             return collection["name"]
-    return user_collection_name  # fallback if not found
+    return user_collection_name
+
+def parse_resource_id(resource_id: str):
+    """
+    Parse an Azure resourceId string into subscriptionId, resourceGroup, and resourceName.
+    """
+    parts = resource_id.strip("/").split("/")
+    result = {}
+    try:
+        result["subscriptionId"] = parts[1]
+        result["resourceGroup"] = parts[3]
+        result["resourceName"] = parts[-1]
+    except IndexError:
+        raise ValueError(f"Invalid resourceId format: {resource_id}")
+    return result
 
 def build_payload(source_type, props):
     kind = SOURCE_TYPES[source_type]["kind"]
     properties = {}
+
+    if source_type in ["AdlsGen2", "AzureStorage", "AzureSqlDatabase", "AzureCosmosDb"]:
+        parsed = parse_resource_id(props["resource_id"])
+        props["subscription_id"] = parsed["subscriptionId"]
+        props["resource_group"] = parsed["resourceGroup"]
+        props["resource_name"] = parsed["resourceName"]
 
     if source_type == "AdlsGen2":
         properties.update({
@@ -190,7 +210,7 @@ def register_datasource():
 def write_to_csv(row, source_type):
     header = ["source_type"] + COMMON_PROPERTIES + SOURCE_TYPES[source_type]["properties"] + ["timestamp"]
     file_exists = os.path.exists(CSV_FILE)
-    with open(CSV_FILE, "a", newline="") as f:
+    with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow(header)
@@ -204,7 +224,6 @@ def generate_backup_script(source_type, props):
     script = f'''import json
 from azure.identity import ClientSecretCredential
 from azure.purview.scanning import PurviewScanningClient
-from azure.purview.administration.account import PurviewAccountClient
 from authenticate import authenticate
 
 creds = authenticate()
@@ -228,13 +247,14 @@ def recreate_datasource():
     client = get_purview_client()
     data_source = {json.dumps(payload, indent=2)}
     response = client.data_sources.create_or_update(data_source_name="{props['ds_name']}", body=data_source)
-    print("✅ Data source recreated:", response)
+    print("Data source recreated:", response)
 
 if __name__ == "__main__":
     recreate_datasource()
 '''
     with open(filename, "w", encoding="utf-8") as f:
         f.write(script)
+    print(f"📂 Backup script created: {filename}")
 
 if __name__ == "__main__":
     register_datasource()
