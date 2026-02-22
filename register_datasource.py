@@ -3,10 +3,12 @@ import csv
 import datetime
 from azure.identity import ClientSecretCredential
 from azure.purview.scanning import PurviewScanningClient
+from azure.purview.administration.account import PurviewAccountClient
 from authenticate import authenticate
 
 BACKUP_DIR = "backup-datasources"
 CSV_FILE = "datasources.csv"
+config = authenticate() 
 
 # Supported source types and required properties (per Microsoft docs)
 SOURCE_TYPES = {
@@ -132,8 +134,7 @@ def build_payload(source_type, props):
         "properties": properties
     }
 
-def register_datasource():
-    config = authenticate()
+def register_datasource(config):
     purview_account = config["purview_account_name"]
     endpoint = f"https://{purview_account}.purview.azure.com"
 
@@ -154,7 +155,7 @@ def register_datasource():
     payload = build_payload(source_type, props)
 
     credential = get_credentials(config)
-    client = PurviewScanningClient(endpoint=endpoint, credential=credential)
+    client = PurviewAccountClient(endpoint=purview_endpoint, credential=credentials, logging_enable=True)
 
     try:
         response = client.data_sources.create_or_update(data_source_name=props["ds_name"], body=payload)
