@@ -14,23 +14,23 @@ BACKUP_DIR = "backup-datasources"
 CSV_FILE = os.path.expanduser("~/datasources.csv")  # safe writable path
 creds = authenticate()
 
-# Source definitions
+# Source definitions (only user-entered properties here)
 SOURCE_TYPES = {
     "AdlsGen2": {
         "kind": "AdlsGen2",
-        "properties": ["endpoint", "resource_id", "subscription_id", "resource_group", "resource_name", "location"]
+        "properties": ["endpoint", "resource_id", "location"]
     },
     "AzureStorage": {
         "kind": "AzureStorage",
-        "properties": ["endpoint", "resource_id", "subscription_id", "resource_group", "resource_name", "location"]
+        "properties": ["endpoint", "resource_id", "location"]
     },
     "AzureSqlDatabase": {
         "kind": "AzureSqlDatabase",
-        "properties": ["server_endpoint", "resource_id", "subscription_id", "resource_group", "resource_name", "location"]
+        "properties": ["server_endpoint", "resource_id", "location"]
     },
     "AzureCosmosDb": {
         "kind": "AzureCosmosDb",
-        "properties": ["account_uri", "resource_id", "subscription_id", "resource_group", "resource_name", "location"]
+        "properties": ["account_uri", "resource_id", "location"]
     },
     "SqlServer": {
         "kind": "SqlServer",
@@ -50,7 +50,11 @@ SOURCE_TYPES = {
     }
 }
 
+# Common properties users always enter
 COMMON_PROPERTIES = ["ds_name", "collection_name"]
+
+# Parsed fields (derived from resource_id) that we want in CSV/payload but not prompted
+PARSED_FIELDS = ["subscription_id", "resource_group", "resource_name"]
 
 def get_credentials():
     return ClientSecretCredential(
@@ -77,10 +81,14 @@ def get_admin_client():
 
 def resolve_collection_name(user_collection_name: str) -> str:
     admin_client = get_admin_client()
-    collection_list = admin_client.collections.list_collections()
-    for collection in collection_list:
-        if collection.get("friendlyName", "").lower() == user_collection_name.lower():
-            return collection.get("name", user_collection_name)
+    try:
+        collection_list = admin_client.collections.list_collections()
+        for collection in collection_list:
+            if collection.get("friendlyName", "").lower() == user_collection_name.lower():
+                return collection.get("name", user_collection_name)
+    except Exception:
+        # If admin call fails, fall back to user-provided name
+        pass
     return user_collection_name
 
 def parse_resource_id(resource_id: str) -> Dict[str, str]:
@@ -92,7 +100,6 @@ def parse_resource_id(resource_id: str) -> Dict[str, str]:
     parts = resource_id.strip("/").split("/")
     if len(parts) < 6:
         raise ValueError(f"Invalid resourceId format: {resource_id}")
-    # parts example: ['subscriptions','<subId>','resourceGroups','<rg>','providers',...,'<resourceType>','<resourceName>']
     try:
         subscription_id = parts[1]
         resource_group = parts[3]
@@ -171,23 +178,12 @@ def build_payload(source_type: str, props: Dict[str, str]) -> Dict:
 
     return {"name": props.get("ds_name", ""), "kind": kind, "properties": properties}
 
-def ensure_csv_header(superset_fields):
-    """
-    Ensure CSV exists and has the superset header. If file exists but header differs, do not overwrite;
-    append rows using DictWriter with fieldnames superset_fields.
-    """
-    file_exists = os.path.exists(CSV_FILE)
-    if not file_exists:
-        os.makedirs(os.path.dirname(CSV_FILE), exist_ok=True) if os.path.dirname(CSV_FILE) else None
-        with open(CSV_FILE, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=superset_fields)
-            writer.writeheader()
-
 def get_superset_fields():
     """
     Build a superset header that includes:
     - source_type, COMMON_PROPERTIES
-    - all properties from SOURCE_TYPES (unique)
+    - all user-entered properties from SOURCE_TYPES
+    - parsed fields (subscription_id, resource_group, resource_name)
     - timestamp
     """
     fields = ["source_type"] + COMMON_PROPERTIES[:]
@@ -197,12 +193,26 @@ def get_superset_fields():
             if p not in seen:
                 fields.append(p)
                 seen.add(p)
+    # add parsed fields explicitly (they are not in SOURCE_TYPES properties)
+    for pf in PARSED_FIELDS:
+        if pf not in seen:
+            fields.append(pf)
+            seen.add(pf)
     fields.append("timestamp")
     return fields
 
+def ensure_csv_header(superset_fields):
+    file_exists = os.path.exists(CSV_FILE)
+    if not file_exists:
+        dirpath = os.path.dirname(CSV_FILE)
+        if dirpath:
+            os.makedirs(dirpath, exist_ok=True)
+        with open(CSV_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=superset_fields)
+            writer.writeheader()
+
 def write_to_csv_record(record: Dict[str, str], superset_fields):
     ensure_csv_header(superset_fields)
-    # Ensure all keys exist
     row = {k: record.get(k, "") for k in superset_fields}
     with open(CSV_FILE, "a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=superset_fields)
@@ -253,14 +263,13 @@ def register_datasource():
         print("Unsupported source type.")
         return
 
-    props = {}
+    props: Dict[str, str] = {}
     # Collect common properties
     for prop in COMMON_PROPERTIES:
         props[prop] = input(f"Enter {prop}: ").strip()
 
-    # Collect source-specific properties
+    # Collect only user-entered source-specific properties (do NOT prompt for parsed fields)
     for prop in SOURCE_TYPES[source_type]["properties"]:
-        # For Azure sources, resource_id is required; prompt for it if present
         props[prop] = input(f"Enter {prop}: ").strip()
 
     # If Azure source and resource_id provided, parse and populate parsed fields
@@ -273,8 +282,7 @@ def register_datasource():
                 props["resource_group"] = parsed["resourceGroup"]
                 props["resource_name"] = parsed["resourceName"]
             except ValueError as ve:
-                print(f"Resource ID parse error: {ve}")
-                # Continue but leave parsed fields empty
+                print(f"Warning: Resource ID parse error: {ve}")
                 props.setdefault("subscription_id", "")
                 props.setdefault("resource_group", "")
                 props.setdefault("resource_name", "")
@@ -283,7 +291,7 @@ def register_datasource():
             props.setdefault("resource_group", "")
             props.setdefault("resource_name", "")
 
-    # Resolve collection name to internal Purview name
+    # Resolve collection name to internal Purview name (best-effort)
     props["collection_name"] = resolve_collection_name(props.get("collection_name", ""))
 
     # Build payload and register
@@ -299,17 +307,20 @@ def register_datasource():
         print("Error registering data source:", e)
         return
 
-    # Prepare record for CSV using superset header
+    # Prepare record for CSV using superset header (includes parsed fields)
     superset_fields = get_superset_fields()
-    record = {"source_type": source_type}
-    # add common props
+    record: Dict[str, str] = {"source_type": source_type}
     for p in COMMON_PROPERTIES:
         record[p] = props.get(p, "")
-    # add all possible properties (fill missing with empty string)
-    for field in superset_fields:
-        if field in ["source_type"] + COMMON_PROPERTIES + ["timestamp"]:
-            continue
-        record[field] = props.get(field, "")
+    # include all user-entered properties
+    for st in SOURCE_TYPES.values():
+        for p in st["properties"]:
+            # only add if not already present
+            if p not in record:
+                record[p] = props.get(p, "")
+    # add parsed fields explicitly
+    for pf in PARSED_FIELDS:
+        record[pf] = props.get(pf, "")
     record["timestamp"] = datetime.datetime.utcnow().isoformat() + "Z"
 
     write_to_csv_record(record, superset_fields)
