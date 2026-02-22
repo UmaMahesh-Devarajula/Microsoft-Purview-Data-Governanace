@@ -131,7 +131,6 @@ def build_payload(source_type, props):
     }
 
 def register_datasource():
-    creds = authenticate() 
     purview_endpoint = f"https://{creds['purview_account_name']}.purview.azure.com"
     purview_scan_endpoint = f"https://{creds['purview_account_name']}.scan.purview.azure.com"
     purview_account = creds["purview_account_name"]
@@ -190,7 +189,6 @@ def get_credentials():
 	return credentials
 
 def recreate_datasource():
-    creds = authenticate()
     purview_endpoint = f"https://{{creds['purview_account_name']}}.purview.azure.com"
     credentials = get_credentials()
     client = PurviewAccountClient(endpoint=purview_endpoint, credential=credentials, logging_enable=True)
@@ -201,6 +199,7 @@ def recreate_datasource():
     print("✅ Data source recreated:", response)
 
 if __name__ == "__main__":
+    creds = authenticate() 
     recreate_datasource()
 '''
     with open(filename, "w") as f:
@@ -208,4 +207,5 @@ if __name__ == "__main__":
     print(f"📂 Backup script created: {filename}")
 
 if __name__ == "__main__":
+    creds = authenticate() 
     register_datasource()
