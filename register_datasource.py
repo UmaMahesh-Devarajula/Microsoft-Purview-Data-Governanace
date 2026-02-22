@@ -8,7 +8,7 @@ from azure.purview.administration.account import PurviewAccountClient
 from authenticate import authenticate
 
 BACKUP_DIR = "backup-datasources"
-CSV_FILE = "datasources.csv"
+CSV_FILE = os.path.expanduser("~/datasources.csv")  # safer path
 
 creds = authenticate()
 
@@ -81,9 +81,6 @@ def resolve_collection_name(user_collection_name):
     return user_collection_name
 
 def parse_resource_id(resource_id: str):
-    """
-    Parse an Azure resourceId string into subscriptionId, resourceGroup, and resourceName.
-    """
     parts = resource_id.strip("/").split("/")
     result = {}
     try:
@@ -97,12 +94,6 @@ def parse_resource_id(resource_id: str):
 def build_payload(source_type, props):
     kind = SOURCE_TYPES[source_type]["kind"]
     properties = {}
-
-    if source_type in ["AdlsGen2", "AzureStorage", "AzureSqlDatabase", "AzureCosmosDb"]:
-        parsed = parse_resource_id(props["resource_id"])
-        props["subscription_id"] = parsed["subscriptionId"]
-        props["resource_group"] = parsed["resourceGroup"]
-        props["resource_name"] = parsed["resourceName"]
 
     if source_type == "AdlsGen2":
         properties.update({
@@ -186,6 +177,13 @@ def register_datasource():
         props[prop] = input(f"Enter {prop}: ")
     for prop in SOURCE_TYPES[source_type]["properties"]:
         props[prop] = input(f"Enter {prop}: ")
+
+    # Parse resource_id for Azure sources BEFORE payload + CSV
+    if source_type in ["AdlsGen2", "AzureStorage", "AzureSqlDatabase", "AzureCosmosDb"]:
+        parsed = parse_resource_id(props["resource_id"])
+        props["subscription_id"] = parsed["subscriptionId"]
+        props["resource_group"] = parsed["resourceGroup"]
+        props["resource_name"] = parsed["resourceName"]
 
     props["collection_name"] = resolve_collection_name(props["collection_name"])
 
