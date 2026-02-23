@@ -3,9 +3,9 @@ import csv
 import datetime
 import json
 from typing import Dict, List
-from data-sources import SOURCE_TYPES
-from data-sources import PARSED_FIELDS
-from data-sources import COMMON_PROPERTIES
+from datasources.datasources import SOURCE_TYPES
+from datasources.datasources import PARSED_FIELDS
+from datasources.datasources import COMMON_PROPERTIES
 
 def get_superset_fields() -> List[str]:
     """
