@@ -1,5 +1,5 @@
 from azure.identity import ClientSecretCredential
-from authenticate import authenticate
+from Authenticate.authenticate import authenticate
 
 def get_credentials():
     creds = authenticate()
