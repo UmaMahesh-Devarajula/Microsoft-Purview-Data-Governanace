@@ -24,5 +24,5 @@ while True:
     else:
         print("Incorrect choice, try again.\n")
 
-if __name__ == "__main__":
+__init__ main():
 purview()
