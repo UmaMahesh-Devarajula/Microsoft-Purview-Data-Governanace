@@ -24,3 +24,6 @@ def purview():
             sys.exit(0)
         else:
             print("Incorrect choice, try again.\n")
+
+if __name__ == "__main__":
+    purview()
