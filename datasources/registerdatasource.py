@@ -10,7 +10,7 @@ from datasources.datasources import SOURCE_TYPES
 from datasources.datasources import COMMON_PROPERTIES
 from datasources.datasources import PARSED_FIELDS
 from datasources.buildpayload import build_payload
-from datasources.parseresourceid import parse_resource_id
+from datasources.parseresourceId import parse_resource_id
 from Collections.resolvecollection import resolve_collection_name
 from datasourcesgenerateregistereddatasourcescsv import get_superset_fields
 from datasourcesgenerateregistereddatasourcescsv import reconcile_and_ensure_csv
