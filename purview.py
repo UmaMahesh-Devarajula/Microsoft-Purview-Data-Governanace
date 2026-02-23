@@ -4,13 +4,13 @@ from DataMap.dataMap import datamap
 
 def purview():
     print("*******welcome*******")
-    print("Please choose any of the below options:")
-    print("1. Create Purview Account")
-    print("2. Access DataMap")
-    print("3. Access UnifiedCatalog")
-    print("4. Exit")
-
+    
     while True:
+        print("Please choose any of the below options:")
+        print("1. Create Purview Account")
+        print("2. Access DataMap")
+        print("3. Access UnifiedCatalog")
+        print("4. Exit")
         choice = input("Enter your choice: ")
 
         if choice == "1":

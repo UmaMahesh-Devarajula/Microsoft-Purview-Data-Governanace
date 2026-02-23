@@ -2,9 +2,9 @@ import sys
 from datasources.registerdatasource import register_datasource
 
 def datamap():    
-    print("1. Register a data source \n 2. scan a data source \n 3. go to previous menu \n 4. exit")
-    
+        
     while True:
+        print("1. Register a data source \n 2. scan a data source \n 3. go to previous menu \n 4. exit")
         choice = input("Enter your choice: ")
         if choice == "1":
             register_datasource()
