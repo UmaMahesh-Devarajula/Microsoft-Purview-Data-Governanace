@@ -1,12 +1,13 @@
 import sys
 from CreatePurview.createpurview import createpurview
 from DataMap.dataMap import datamap
+
 print("*******welcome*******")
-    print("Please choose any of the below options:")
-    print("1. Create Purview Account")
-    print("2. Access DataMap")
-    print("3. Access UnifiedCatalog")
-    print("4. Exit")
+print("Please choose any of the below options:")
+print("1. Create Purview Account")
+print("2. Access DataMap")
+print("3. Access UnifiedCatalog")
+print("4. Exit")
 
 while True:
     choice = input("Enter your choice: ")
