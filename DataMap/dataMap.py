@@ -1,7 +1,7 @@
 import sys
 from datasources.registerdatasource import register_datasource
-def datamap():
-    
+
+def datamap():    
     print("1. Register a data source \n 2. scan a data source \n 3. go to previous menu \n 4. exit")
     while True:
     choice = input("Enter your choice: ")
