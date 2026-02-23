@@ -2,27 +2,25 @@ import sys
 from CreatePurview.createpurview import createpurview
 from DataMap.dataMap import datamap
 
-print("*******welcome*******")
-print("Please choose any of the below options:")
-print("1. Create Purview Account")
-print("2. Access DataMap")
-print("3. Access UnifiedCatalog")
-print("4. Exit")
+def purview():
+    print("*******welcome*******")
+    print("Please choose any of the below options:")
+    print("1. Create Purview Account")
+    print("2. Access DataMap")
+    print("3. Access UnifiedCatalog")
+    print("4. Exit")
 
-while True:
-    choice = input("Enter your choice: ")
+    while True:
+        choice = input("Enter your choice: ")
 
-    if choice == "1":
-        createpurview()
-    elif choice == "2":
-        datamap()
-    elif choice == "3":
-        openUnifiedCatalog()
-    elif choice == "4":
-        print("Exiting... Goodbye!")
-        sys.exit(0)
-    else:
-        print("Incorrect choice, try again.\n")
-
-__init__ main():
-purview()
+        if choice == "1":
+            createpurview()
+        elif choice == "2":
+            datamap()
+        elif choice == "3":
+            openUnifiedCatalog()
+        elif choice == "4":
+            print("Exiting... Goodbye!")
+            sys.exit(0)
+        else:
+            print("Incorrect choice, try again.\n")
