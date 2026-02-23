@@ -6,7 +6,7 @@ import json
 from typing import Dict, List
 from PurviewScanClient.purviewscanclient import get_purview_scan_client
 from Authenticate.authenticate import authenticate
-from datasources.datasources import generate_backup_script
+from datasources.generatebackupscript import generate_backup_script
 from datasources.datasources import SOURCE_TYPES
 from datasources.datasources import COMMON_PROPERTIES
 from datasources.datasources import PARSED_FIELDS
