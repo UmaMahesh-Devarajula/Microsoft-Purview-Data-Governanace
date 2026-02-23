@@ -1,4 +1,5 @@
 import sys
+import purview
 from datasources.registerdatasource import register_datasource
 
 def datamap():    
@@ -8,9 +9,9 @@ def datamap():
     if choice == "1":
         register_datasource()
     elif choice == "2":
-        datamap()
+        create_scan()
     elif choice == "3":
-        openUnifiedCatalog()
+        purview()
     elif choice == "4":
         print("Exiting... Goodbye!")
         sys.exit(0)
