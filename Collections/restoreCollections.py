@@ -21,9 +21,9 @@ def recreate_from_csv():
     for _, row in df.iterrows():
         # Skip root (usually has no parentName in the export)
         if pd.isna(row['parentName']):
-            if row['name'] != row['friendly_name']:
+            if row['name'] != row['friendlyName']:
                 domain_name= row['name']
-                domain_friendly_name = row['friendly_name']  
+                domain_friendly_name = row['friendlyName']  
                 def create_domain(domain_name, domain_friendly_name):
                     # 2. Get Auth Token using Service Principal
                     r=authenticate()
@@ -38,7 +38,7 @@ def recreate_from_csv():
                     }
                     body = {
                         "properties": {
-                            "friendlyName": row['friendly_name'],
+                            "friendlyName": row['friendlyName'],
                             "description": row['description']
                         }
                     }
@@ -46,7 +46,7 @@ def recreate_from_csv():
                     response = requests.put(url, headers=headers, json=body)
 
                     if response.status_code in [200, 201]:
-                        print(f"SUCCESS: Domain '{row['friendly_name']}' created.")
+                        print(f"SUCCESS: Domain '{row['friendlyName']}' created.")
                     else:
                         print(f"[{get_now()}] ERROR {response.status_code}: {response.text}")
             else:
