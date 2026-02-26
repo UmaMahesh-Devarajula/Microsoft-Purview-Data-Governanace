@@ -13,7 +13,7 @@ def datamap():
             listCollections()
         elif choice == "3":
                 import purview# Import inside the function
-                purview()
+                purview.purview()
         elif choice == "4":
             print("Exiting... Goodbye!")
             sys.exit(0)
