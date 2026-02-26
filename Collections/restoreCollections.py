@@ -35,7 +35,7 @@ def recreate_from_csv():
                     token=input("enter token")
 
                     # 3. Prepare REST Request
-                    url = f" https://{r["tenant_id"]}-api.purview-service.microsoft.com/account/domains/{domain_name}?api-version=2023-12-01-preview"
+                    url = f" https://{r["tenant_id"]}-api.purview-service.microsoft.com/account/domains/{domain_friendly_name}?api-version=2023-12-01-preview"
                     headers = {
                         "Authorization": f"Bearer {token}",
                         "Content-Type": "application/json"
