@@ -30,7 +30,7 @@ def recreate_from_csv():
                     # 2. Get Auth Token using Service Principal
                     r=authenticate()
                     cred = ClientSecretCredential(r["tenant_id"], r["client_id"], r["client_secret"])
-                    token = cred.get_token(f"{r["tenant_id"]}-api.purview-service.microsoft.com")
+                    token = cred.get_token(f"https://{r["tenant_id"]}-api.purview-service.microsoft.com")
                     print(token.token)
 
                     # 3. Prepare REST Request
