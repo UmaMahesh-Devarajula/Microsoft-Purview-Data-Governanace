@@ -2,6 +2,10 @@ from PurviewClient.purviewclient import get_purview_admin_client
 from datetime import datetime
 import pandas as pd
 import os
+import json
+import requests
+from Authenticate.authenticate import authenticate
+from azure.identity import ClientSecretCredential
 
 def recreate_from_csv():
     client = get_purview_admin_client()
@@ -17,7 +21,34 @@ def recreate_from_csv():
     for _, row in df.iterrows():
         # Skip root (usually has no parentName in the export)
         if pd.isna(row['parentName']):
-            continue
+            if row['name'] != row['friendly_name']:  
+                def create_domain(row['name'], row['friendly_name']):
+                    # 2. Get Auth Token using Service Principal
+                    r=authenticate()
+                    cred = ClientSecretCredential(r["tenant_id"], r["client_id"], r["client_secret"])
+                    token = cred.get_token("https://purview.azure.net")
+
+                    # 3. Prepare REST Request
+                    url = f"{r["tenant_id"]}-api.purview-service.microsoft.com/account/domains/{row['name']}?api-version=2023-12-01-preview"
+                    headers = {
+                        "Authorization": f"Bearer {token.token}",
+                        "Content-Type": "application/json"
+                    }
+                    body = {
+                        "properties": {
+                            "friendlyName": row['friendly_name'],
+                            "description": row['description']
+                        }
+                    }
+
+                    response = requests.put(url, headers=headers, json=body)
+
+                    if response.status_code in [200, 201]:
+                        print(f"SUCCESS: Domain '{row['friendly_name']}' created.")
+                    else:
+                        print(f"[{get_now()}] ERROR {response.status_code}: {response.text}")
+            else:
+                continue
             
         collection_body = {
             "friendlyName": row['friendlyName'],
