@@ -52,7 +52,7 @@ def recreate_from_csv():
                     if response.status_code in [200, 201]:
                         print(f"SUCCESS: Domain '{row['friendlyName']}' created.")
                     else:
-                        print(f"[{get_now()}] ERROR {response.status_code}: {response.text}")
+                        print(f"ERROR {response.status_code}: {response.text}")
 
                 create_domain(domain_name, domain_friendly_name)
         
