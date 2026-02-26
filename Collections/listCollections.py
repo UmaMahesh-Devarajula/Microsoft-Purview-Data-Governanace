@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 import os
 
-def list_collections()
+def list_collections():
     client = get_purview_admin_client()
 # Fetch collections
     collections = client.collections.list_collections()
