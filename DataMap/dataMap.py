@@ -12,7 +12,7 @@ def datamap():
             register_datasource()
         elif choice == "2":
             listCollections()
-        elif choice == "2":
+        elif choice == "3":
             recreate_from_csv()
         elif choice == "4":
                 import purview# Import inside the function
