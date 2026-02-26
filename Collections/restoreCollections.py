@@ -25,6 +25,7 @@ def recreate_from_csv():
                 domain_name= row['name']
                 print(domain_name)
                 domain_friendly_name = row['friendlyName']  
+                print(domain_friendly_name)
                 def create_domain(domain_name, domain_friendly_name):
                     # 2. Get Auth Token using Service Principal
                     r=authenticate()
@@ -40,6 +41,7 @@ def recreate_from_csv():
                     }
                     body = {
                         "properties": {
+                            "containerType":"Domain"
                             "friendlyName": row['friendlyName'],
                             "description": row['description']
                         }
