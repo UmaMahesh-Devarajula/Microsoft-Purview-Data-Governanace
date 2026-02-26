@@ -14,7 +14,8 @@ def listCollections():
         collection_data.append({
         "name": coll.get("name"),
         "friendlyName": coll.get("friendlyName"),
-        "parentName": coll.get("parentCollection", {}).get("referenceName")
+        "parentName": coll.get("parentCollection", {}).get("referenceName"),
+        "description": coll.get("description")
     })
 
     # Write to CSV
