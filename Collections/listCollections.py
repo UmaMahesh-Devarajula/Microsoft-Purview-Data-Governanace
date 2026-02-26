@@ -6,7 +6,7 @@ import os
 def listCollections():
     client = get_purview_admin_client()
 # Fetch collections
-    collections = list(client.domains.list_domains())
+    collections = list(client.collections.list_collections())
     print(collections)
     # Extract hierarchy info
     collection_data = []
@@ -14,7 +14,7 @@ def listCollections():
         collection_data.append({
         "name": coll.get("name"),
         "friendlyName": coll.get("friendlyName"),
-       # "parentName": coll.get("parentCollection", {}).get("referenceName"),
+        "parentName": coll.get("parentCollection", {}).get("referenceName")
         "description": coll.get("description")
     })
 
