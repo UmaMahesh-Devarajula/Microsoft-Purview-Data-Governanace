@@ -41,7 +41,7 @@ def recreate_from_csv():
                     }
                     body = {
                         "properties": {
-                            "containerType":"Domain"
+                            "containerType":"Domain",
                             "friendlyName": row['friendlyName'],
                             "description": row['description']
                         }
