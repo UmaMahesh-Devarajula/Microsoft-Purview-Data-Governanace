@@ -53,8 +53,7 @@ def recreate_from_csv():
                         print(f"SUCCESS: Domain '{row['friendlyName']}' created.")
                     else:
                         print(f"[{get_now()}] ERROR {response.status_code}: {response.text}")
-            else:
-                continue
+        continue
             
         collection_body = {
             "friendlyName": row['friendlyName'],
