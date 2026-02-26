@@ -11,7 +11,7 @@ def listCollections():
     # Extract hierarchy info
     collection_data = []
     for coll in collections:
-        collections_data.append({
+        collectionx_data.append({
         "name": coll.get("name"),
         "friendlyName": coll.get("friendlyName"),
         "parentName": coll.get("parentCollection", {}).get("referenceName")
