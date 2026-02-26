@@ -21,8 +21,10 @@ def recreate_from_csv():
     for _, row in df.iterrows():
         # Skip root (usually has no parentName in the export)
         if pd.isna(row['parentName']):
-            if row['name'] != row['friendly_name']:  
-                def create_domain(row['name'], row['friendly_name']):
+            if row['name'] != row['friendly_name']:
+                domain_name= row['name']
+                domain_friendly_name = row['friendly_name']  
+                def create_domain(domain_name, domain_friendly_name):
                     # 2. Get Auth Token using Service Principal
                     r=authenticate()
                     cred = ClientSecretCredential(r["tenant_id"], r["client_id"], r["client_secret"])
