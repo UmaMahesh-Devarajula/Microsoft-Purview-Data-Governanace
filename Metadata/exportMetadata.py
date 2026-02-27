@@ -41,7 +41,7 @@ def exportMetadata():
         guid_batch = all_guids[i : i + batch_size]
         try:
             # list_by_guids returns the complete Atlas entity format
-            details = client.entity.list_by_guids(guid=guid_batch)
+            details = client.entity.list_by_guids(guids=guid_batch)
             
             # Extract the actual entity objects (stored in 'entities')
             entities = details.get("entities", [])
