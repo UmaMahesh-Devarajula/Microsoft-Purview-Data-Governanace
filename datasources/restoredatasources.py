@@ -3,7 +3,7 @@ import json
 from typing import Dict, List
 from PurviewScanClient.purviewscanclient import get_purview_scan_client
 
-def restore_data_sources():
+def restoredatasources():
     client = get_purview_scan_client()
     filepath = input("Enter file path")
 
@@ -28,4 +28,4 @@ def restore_data_sources():
         print(f"Error restoring data sources: {e}")
 
 if "__name__" == "__main__":
-    restore_data_sources()
+    restoredatasources()
