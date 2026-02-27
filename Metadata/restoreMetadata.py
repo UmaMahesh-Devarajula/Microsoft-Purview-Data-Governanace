@@ -5,9 +5,7 @@ from PurviewCatalogClient.purviewcatalogclient import get_purview_catalog_client
 
 
 def restoreMetadata():
-    
-    client = get_purview_catalog_client
-
+    purview_client = get_purview_catalog_client
     BACKUP_FILE = input("enter filepath")
 
     with open(BACKUP_FILE, "r") as f:
@@ -44,7 +42,7 @@ def restoreMetadata():
     for i in range(0, len(cleaned_assets), batch_size):
         batch = cleaned_assets[i : i + batch_size]
         try:
-            client.entity.create_or_update_entities(entities={"entities": batch})
+            purview_client.entity.create_or_update_entities(entities={"entities": batch})
             print(f"Restored batch {i//batch_size + 1} with hierarchy.")
         except Exception as e:
             print(f"Error in batch {i}: {e}")
