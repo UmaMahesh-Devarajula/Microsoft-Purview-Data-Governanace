@@ -5,7 +5,7 @@ import json
 from typing import Dict, List
 from PurviewScanClient.purviewscanclient import get_purview_scan_client
 
-date=(datetime.now().strftime('%Y-%m-%d'))
+date=(datetime.now().strftime('%Y-%m-%\d'))
 filepath = f"datasources\datasources{date}.json"
 
 def export_data_sources():
