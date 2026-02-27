@@ -21,7 +21,7 @@ def restoreCollections():
             continue
             collection_body = {
                 "friendlyName": row['friendlyName'],
-                "description": f"{row['description']}",
+                "description": row['description']",
                 "parentCollection": {
                     "referenceName": row['parentName'],
                     "type": "CollectionReference"
