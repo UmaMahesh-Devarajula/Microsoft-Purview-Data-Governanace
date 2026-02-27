@@ -5,10 +5,10 @@ import json
 from typing import Dict, List
 from PurviewScanClient.purviewscanclient import get_purview_scan_client
 
-date=(datetime.now().strftime('%Y-%m-%\d'))
+date=(datetime.now().strftime('%Y-%m-%d'))
 filepath = f"datasources\datasources{date}.json"
 
-def export_data_sources():
+def exportdatasources():
     client = get_purview_scan_client()
     try:
         # Fetch all data sources
@@ -24,4 +24,4 @@ def export_data_sources():
         print(f"Error exporting data sources: {e}")
 
 if "__name__" == "__main__":
-    export_data_sources()    
+    exportdatasources()    

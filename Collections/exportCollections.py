@@ -20,7 +20,7 @@ def exportCollections():
 
     # Write to CSV
     df = pd.DataFrame(collection_data)
-    df.to_csv(f"Collections\purview_hierarchy_{datetime.now().strftime('%Y-%m-%\d-%H-%M-%S')}.csv", index=False)
+    df.to_csv(f"Collections\purview_hierarchy_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.csv", index=False)
     print("Collection structure exported to purview_hierarchy.csv")
 
 if __name__ == "__main__":
