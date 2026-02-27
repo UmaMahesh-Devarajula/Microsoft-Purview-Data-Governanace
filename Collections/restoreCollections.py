@@ -42,10 +42,14 @@ def recreate_from_csv():
                         "properties": {
                             "containerType":"Domain",
                             "friendlyName": domain_friendly_name,
-                            "description": f"{row['description']}"
+                            "description": f"{row['description']}",
+                            'systemData': {
+                                'createdBy': '4134b38b-46e8-4a1c-ba61-c051a7e84b77',
+                                'createdByType': 'Application'
+                                },
+                            'collectionProvisioningState': 'Succeeded'
+                            }
                         }
-                    }
-
                     response = requests.put(url, headers=headers, json=body)
 
                     if response.status_code in [200, 201]:
