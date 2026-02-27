@@ -4,8 +4,6 @@ import pandas as pd
 import os
 import json
 import requests
-from Authenticate.authenticate import authenticate
-from azure.identity import ClientSecretCredential
 
 def recreate_from_csv():
     client = get_purview_admin_client()
@@ -21,44 +19,7 @@ def recreate_from_csv():
     for _, row in df.iterrows():
         # Skip root (usually has no parentName in the export)
         if pd.isna(row['parentName']):
-            if row['name'] != row['friendlyName']:
-                domain_name= row['name']
-                print(domain_name)
-                domain_friendly_name = row['friendlyName']  
-                print(domain_friendly_name)
-                def create_domain(domain_name, domain_friendly_name):
-                    # 2. Get Auth Token using Service Principal
-                    r=authenticate()
-                    cred = ClientSecretCredential(r["tenant_id"], r["client_id"], r["client_secret"])
-                    token = cred.get_token("https://purview.azure.net/.default")
-
-                    # 3. Prepare REST Request
-                    url = f" https://{r["tenant_id"]}-api.purview-service.microsoft.com/account/domains/{domain_name}?api-version=2023-12-01-preview"
-                    headers = {
-                        "Authorization": f"Bearer {token.token}",
-                        "Content-Type": "application/json"
-                    }
-                    body = {
-                        "properties": {
-                            "containerType":"Domain",
-                            "friendlyName": domain_friendly_name,
-                            "description": f"{row['description']}",
-                            'systemData': {
-                                'createdBy': '4134b38b-46e8-4a1c-ba61-c051a7e84b77',
-                                'createdByType': 'Application'
-                                },
-                            'collectionProvisioningState': 'Succeeded'
-                            }
-                        }
-                    response = requests.put(url, headers=headers, json=body)
-
-                    if response.status_code in [200, 201]:
-                        print(f"SUCCESS: Domain '{row['friendlyName']}' created.")
-                    else:
-                        print(f"ERROR {response.status_code}: {response.text}")
-
-                create_domain(domain_name, domain_friendly_name)
-        else:
+            continue
             collection_body = {
                 "friendlyName": row['friendlyName'],
                 "description": f"{row['description']}",
