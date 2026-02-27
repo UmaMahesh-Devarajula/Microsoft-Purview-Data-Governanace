@@ -4,7 +4,7 @@ import time
 from PurviewCatalogClient.purviewcatalogclient import get_purview_catalog_client
 
 
-def restore_with_hierarchy():
+def restoreMetadata():
     
     client = get_purview_catalog_client
 
@@ -50,4 +50,4 @@ def restore_with_hierarchy():
             print(f"Error in batch {i}: {e}")
 
 if __name__ == "__main__":
-    restore_with_hierarchy()
+    restoreMetadata()
