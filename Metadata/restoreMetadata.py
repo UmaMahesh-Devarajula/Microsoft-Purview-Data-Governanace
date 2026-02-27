@@ -4,46 +4,50 @@ import time
 from PurviewCatalogClient.purviewcatalogclient import get_purview_catalog_client
 
 
+def restore_with_hierarchy():
+    
+    client = get_purview_catalog_client
 
-def restoreMetadata():
-    # 1. Initialize Client
-    client = get_purview_catalog_client()
+    BACKUP_FILE = input("enter filepath")
 
-    BACKUP_FILE = input("enter file path")
+    with open(BACKUP_FILE, "r") as f:
+        assets = json.load(f)
 
-    # 2. Load backup data
-    print(f"Loading backup from {BACKUP_FILE}...")
-    try:
-        with open(BACKUP_FILE, "r", encoding="utf-8") as f:
-            assets_to_restore = json.load(f)
-    except FileNotFoundError:
-        print("Backup file not found. Please run the export script first.")
-        return
-
-    # 3. Restore in batches
-    batch_size = 100
-    print(f"Starting restoration of {len(assets_to_restore)} assets...")
-
-    for i in range(0, len(assets_to_restore), batch_size):
-        batch = assets_to_restore[i : i + batch_size]
+    cleaned_assets = []
+    for asset in assets:
+        # Create a copy to avoid mutating original data
+        new_asset = {
+            "typeName": asset["typeName"],
+            "attributes": asset["attributes"]
+        }
         
-        # Prepare the Atlas bulk request payload
-        payload = {"entities": batch}
+        # Look for parent attributes (like 'table' for a column or 'db' for a table)
+        # We replace the GUID reference with a QualifiedName reference
+        if "relationshipAttributes" in asset:
+            new_rel_attrs = {}
+            for rel_name, rel_val in asset["relationshipAttributes"].items():
+                if isinstance(rel_val, dict) and "qualifiedName" in rel_val.get("attributes", {}):
+                    # Link by QualifiedName instead of the old, broken GUID
+                    new_rel_attrs[rel_name] = {
+                        "typeName": rel_val["typeName"],
+                        "uniqueAttributes": {
+                            "qualifiedName": rel_val["attributes"]["qualifiedName"]
+                        }
+                    }
+            if new_rel_attrs:
+                new_asset["relationshipAttributes"] = new_rel_attrs
 
+        cleaned_assets.append(new_asset)
+
+    # Upload in batches
+    batch_size = 50
+    for i in range(0, len(cleaned_assets), batch_size):
+        batch = cleaned_assets[i : i + batch_size]
         try:
-            # Use the bulk create or update method
-            # This will create new assets or update existing ones based on qualifiedName
-            response = client.entity.create_or_update_entities(entities=payload)
-            
-            # Check for assigned GUIDs in the response
-            guid_assignments = response.get("guidAssignments", {})
-            print(f"Restored batch {i//batch_size + 1}: {len(guid_assignments)} entities processed.")
-            
-            time.sleep(1)  # Optional: slight delay to manage API load
+            client.entity.create_or_update_entities(entities={"entities": batch})
+            print(f"Restored batch {i//batch_size + 1} with hierarchy.")
         except Exception as e:
-            print(f"Failed to restore batch starting at index {i}: {e}")
-
-    print("\nRestoration process complete!")
+            print(f"Error in batch {i}: {e}")
 
 if __name__ == "__main__":
-    restoreMetadata()
+    restore_with_hierarchy()
