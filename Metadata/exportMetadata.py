@@ -3,8 +3,8 @@ from datetime import datetime
 import time
 from PurviewCatalogClient.purviewcatalogclient import get_purview_catalog_client
 
-date=(datetime.now().strftime('%Y-%m-%%d'))
-OUTPUT_FILE = f"Metadata\purview_full_backup{date}.json"
+date=(datetime.now().strftime('%Y-%m-%d'))
+OUTPUT_FILE = fr"Metadata\purview_full_backup{date}.json"
 
 def exportMetadata():
     # 1. Initialize catalog client
