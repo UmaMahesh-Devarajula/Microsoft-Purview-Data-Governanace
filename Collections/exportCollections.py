@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 import os
 
-def listCollections():
+def exportCollections():
     client = get_purview_admin_client()
 # Fetch collections
     collections = list(client.collections.list_collections())
@@ -24,4 +24,4 @@ def listCollections():
     print("Collection structure exported to purview_hierarchy.csv")
 
 if __name__ == "__main__":
-    listCollections()
+    exportCollections()

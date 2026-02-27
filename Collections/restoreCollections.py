@@ -3,9 +3,8 @@ from datetime import datetime
 import pandas as pd
 import os
 import json
-import requests
 
-def recreate_from_csv():
+def restoreCollections():
     client = get_purview_admin_client()
     file_path=input("Enter collection hierarchy file path")
 
@@ -39,4 +38,4 @@ def recreate_from_csv():
                 print(f"Failed {row['friendlyName']}: {e}")
 
 if "__name__" == "__main__":
-    recreate_from_csv()
+    restoreCollections()
