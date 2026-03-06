@@ -19,7 +19,8 @@ def restoreCollections():
         # Skip root (usually has no parentName in the export)
         if pd.isna(row['parentName']):
             continue
-            collection_body = {
+            
+        collection_body = {
                 "friendlyName": row['friendlyName'],
                 "description": row['description'],
                 "parentCollection": {
@@ -28,7 +29,7 @@ def restoreCollections():
                 }
             }
 
-            try:
+        try:
                 client.collections.create_or_update_collection(
                     collection_name=row['name'], 
                     collection=collection_body
