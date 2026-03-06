@@ -18,7 +18,7 @@ def createCollection():
        
    }
 
-  response= client.client.create_or_update_collection(collection_name= c_name, collection:= Any, body= c_body)
+  response= (client.client.create_or_update_collection(collection_name= c_name, collection= Any, body= c_body) -> Any)
   print(response)
 
 if "__name__" == "__main__":
