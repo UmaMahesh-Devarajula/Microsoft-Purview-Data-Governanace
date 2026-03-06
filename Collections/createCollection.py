@@ -13,13 +13,12 @@ def createCollection():
        "name": f"{c_name}",  # Optional. Gets the name.
        "parentCollection": {
            "referenceName": f"{c_parent}",  # Optional. Gets or sets the reference name.
-           "type": "CollectionReference"  # Optional. Default value is "CollectionReference". Gets or sets the reference type property.
-       }
-       
-   }
-
-  response= (client.client.create_or_update_collection(collection_name= c_name, collection= Any, body= c_body) -> Any)
-  print(response)
+           "type": "CollectionReference" 
+           }
+           
+    }
+    response= (client.client.create_or_update_collection(collection_name= c_name, collection= Any, body= c_body) -> Any)
+    print(response)
 
 if "__name__" == "__main__":
     createCollection()
