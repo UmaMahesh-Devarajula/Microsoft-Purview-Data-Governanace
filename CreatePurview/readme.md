@@ -43,7 +43,7 @@ def createpurview():
     SPsv = input("Enter Service Principals Secret value:")
     rg_name = input("Enter resource group name:")
     purview_name = input("Enter purview account name (It must be globally unique):")
-    location = input("Enter region:") 
+    location = input("Enter region: ") 
 
     # Authenticate
     credentials = ClientSecretCredential(client_id=SPid, client_secret=SPsv, tenant_id=Tid) 
@@ -62,7 +62,6 @@ def createpurview():
        
     try:
         pa = purview_client.accounts.begin_create_or_update(rg_name, purview_name, purview_resource).result()
-        print("✅ Purview account created successfully!")
         print("Location:", pa.location, "Name:", purview_name, "ID:", pa.id, "Tags:", pa.tags) 
     except Exception as e:
         print("❌ Error creating account:", e)
@@ -72,8 +71,8 @@ def createpurview():
     while getattr(pa, 'provisioning_state') != "Succeeded":
         pa = purview_client.accounts.get(rg_name, purview_name)  
         print("Provisioning state:", getattr(pa, 'provisioning_state'))
-        if getattr(pa, 'provisioning_state') == "Failed":
-            print("❌ Account creation failed")
+        if getattr(pa, 'provisioning_state') == "Succeeded":
+             print("✅ Purview account created successfully!")
             break
         time.sleep(30)    
 
@@ -84,9 +83,7 @@ createpurview()
 ---
 
 🧾 Input Prompts Overview
-When you execute the script 'create-purview.py', you’ll be asked to enter the following details interactively:
-![alt text](image-1.png)
-
+When you execute the script 'create-purview.py', you’ll be asked to enter the following details interactively
 - Tenant ID
 - Azure Subscription ID
 - Service Principal Client ID
@@ -112,11 +109,8 @@ When executed successfully, the script will:
   - Tags
 - Continuously check the **provisioning state** until it reaches `Succeeded`.
 
-Example output:
+### Example:
+<img width="1254" height="270" alt="image" src="https://github.com/user-attachments/assets/67949e7c-7cd0-4dea-89f9-d95503dbfbe9" />
 
-```
-✅ Purview account created successfully!
-Location: eastus  Name: mypurviewdemo  ID: /subscriptions/xxxx/resourceGroups/demo-rg/providers/Microsoft.Purview/accounts/mypurviewdemo  Tags: {}
-Provisioning state: Succeeded
 
-```
+
