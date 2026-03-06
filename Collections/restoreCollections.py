@@ -34,7 +34,7 @@ def restoreCollections():
                 collection_name=row['name'], 
                 collection=collection_body
                 )
-                print(f"Success: {row['friendlyName']}")
+            print(f"Success: {row['friendlyName']}")
         except Exception as e:
             print(f"Failed {row['friendlyName']}: {e}")
 
