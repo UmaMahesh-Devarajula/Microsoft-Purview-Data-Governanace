@@ -1,18 +1,18 @@
-# Purview Data Governance Automation 🚀
+# Microsoft Purview Data Governance Utility Kit 🚀
 
-Automating Microsoft Purview data governance operations using **REST APIs**, **Python SDK**, and **PyApacheAtlas**.  
-This project demonstrates how to build repeatable workflows for metadata management, glossary terms, lineage, and classifications — all documented step‑by‑step.
-
+Automating Microsoft Purview data governance operations using **REST APIs** and **Python SDK**.  
 ---
 
 ## 📖 Overview
 Data governance is critical for ensuring trust, compliance, and discoverability in modern data platforms.  
 This project shows how to:
-- Deploy Microsoft Purview programmatically
+- Deploy Microsoft Purview account programmatically
 - Connect to Microsoft Purview programmatically
+- Export and restore Data Map's Default Domain and collections
 - Register and scan data sources
+- Export and restore Data Source details
 - ingest and classify data assets
-- Automate glossary term creation
+- Automate glossary term assignment
 - Build custom lineage using PyApacheAtlas
 - Scale governance tasks with Python automation
 
@@ -21,17 +21,7 @@ This project shows how to:
 ## 🛠️ Tech Stack
 - **Microsoft Purview REST API**
 - **Python SDK for Purview**
-- **PyApacheAtlas**
 - **Azure Active Directory (for authentication)**
-
----
-
-## ✨ Features
-- 🔗 **Asset Registration**: Automate onboarding of data sources  
-- 📚 **Glossary Management**: Bulk upload and manage business terms  
-- 🧩 **Lineage Automation**: Build and visualize lineage with PyApacheAtlas  
-- 🛡️ **Classifications**: Apply and manage metadata tags programmatically  
-- ⚙️ **Automation Scripts**: Schedule and orchestrate governance workflows  
 
 ---
 
