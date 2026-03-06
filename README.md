@@ -26,12 +26,12 @@ This project shows how to:
 ---
 
 ## Features
--- **Create Purview Account**
---**Data Map - Collections**
-    --**Create or Update Collection**
-    -- **List Collections**
-    -- **Export Collections info into CSV**
-    -- **Restore Collections from CSV**
+- **Create Purview Account**
+-**Data Map - Collections**
+    -**Create or Update Collection**
+    - **List Collections**
+    -**Export Collections info into CSV**
+    -**Restore Collections from CSV**
 
 ## 🚀 Getting Started
 
