@@ -30,7 +30,7 @@ def collections():
             restoreCollections()
         elif choice == "6":
             from DataMap.dataMap import datamap
-            datamap.datamap()
+            datamap()
         elif choice == "7":
                 import purview# Import inside the function
                 purview.purview()
