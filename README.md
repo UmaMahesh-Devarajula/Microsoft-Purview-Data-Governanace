@@ -8,7 +8,7 @@ Data governance is critical for ensuring trust, compliance, and discoverability 
 This project shows how to:
 - Deploy Microsoft Purview account programmatically
 - Connect to Microsoft Purview programmatically
-- Export and restore Data Map's Default Domain and collections
+- Export and restore Data Map's collections from Default Domain
 - Register and scan data sources
 - Export and restore Data Source details
 - ingest and classify data assets
@@ -24,6 +24,14 @@ This project shows how to:
 - **Azure Active Directory (for authentication)**
 
 ---
+
+## Features
+-- **Create Purview Account**
+--**Data Map - Collections**
+    --**Create or Update Collection**
+    -- **List Collections**
+    -- **Export Collections info into CSV**
+    -- **Restore Collections from CSV**
 
 ## 🚀 Getting Started
 
