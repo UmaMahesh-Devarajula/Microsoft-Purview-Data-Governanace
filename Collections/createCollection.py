@@ -17,8 +17,13 @@ def createCollection():
            }
            
     }
-    response= client.collections.create_or_update_collection(collection_name= c_name, collection= c_body)
-    print(response)
+    try:
+        response= client.collections.create_or_update_collection(collection_name= c_name, collection= c_body)
+        print(response)
+        print(f"Collection {c_name} created sucessfully")
+    except Exception as e:
+        print("Error in creating collection:", e)
+        return
 
 if "__name__" == "__main__":
     createCollection()
