@@ -14,7 +14,7 @@ def createpurview():
     SPsv = input("Enter Service Principals Secret value:")
     rg_name = input("Enter resource group name:")
     purview_name = input("Enter purview account name (It must be globally unique):")
-    location = input("enter region") 
+    location = input("enter region: ") 
 
     # Specify your Active Directory client ID, client secret, and tenant ID
     credentials = ClientSecretCredential(client_id=SPid, client_secret=SPsv, tenant_id=Tid) 
