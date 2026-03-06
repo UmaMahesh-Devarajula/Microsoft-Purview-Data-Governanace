@@ -2,7 +2,7 @@ from PurviewClient.purviewclient import get_purview_admin_client
 from datetime import datetime
 import pandas as pd
 import os
-import json
+import csv
 
 def restoreCollections():
     client = get_purview_admin_client()
