@@ -9,11 +9,9 @@ This project shows how to:
 - Deploy Microsoft Purview account programmatically
 - Connect to Microsoft Purview programmatically
 - Export and restore Data Map's collections from Default Domain
-- Register and scan data sources
+- CRUD - collections, data sources
 - Export and restore Data Source details
-- ingest and classify data assets
-- Automate glossary term assignment
-- Build custom lineage using PyApacheAtlas
+- Export Metadata By Source Type
 - Scale governance tasks with Python automation
 
 ---
