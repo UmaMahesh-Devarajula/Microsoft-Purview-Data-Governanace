@@ -13,12 +13,14 @@ def listdatasources():
         rows.append([
             d.get("kind"),
             d.get("name"),
-            d.get("description"),
+            d.get("properties").get("createdAt")
+            d.get("properties").get("parentCollection")
+            d.get("properties").get("collection").get("referenceName")
             d.get("properties")
         ])
 
     # Define headers
-    headers = ["Kind", "Data Source Name", "Description", "Properties"]
+    headers = ["Kind", "Data Source Name", "Created At", "Parent Collection Name", "Collection Name", "Properties"]
 
     # Print table
     print(tabulate(rows, headers=headers, tablefmt="grid"))
