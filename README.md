@@ -40,12 +40,9 @@ This project shows how to:
   - **List Data Sources**
   - **Export DataSources to a JSON file**
   - **Restore DataSources from JSON file**
-  - **!comming soon!**
-      - **Create Scan**
-      - **Trigger scan**
-      - **Export Metadata**
-      - **Restore Metadata**
-
+ 
+- **Export Metadata by Source type**
+UmaMahesh-Devarajula/Microsoft-Purview-Data-Governanace-Utility-Kit/Metadata/exportmetadatabysourcetype.PNG
      
 ## 🚀 Getting Started
 
