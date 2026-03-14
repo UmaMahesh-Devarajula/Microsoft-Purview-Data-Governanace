@@ -1,5 +1,9 @@
 import sys
 from datasources.registerdatasource import registerdatasource
+from datasources.deletedatasource import deletedatasource
+from datasources.listdatasources import listdatasources
+from datasources.exportdatasources import exportdatasources
+from datasources.restoredatasources import restoredatasources
 
 
 def dataSources():    
