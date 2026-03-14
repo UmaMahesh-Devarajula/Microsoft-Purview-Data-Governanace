@@ -5,9 +5,6 @@ def listdatasources():
     client = get_purview_scan_client()
     ds = list(client.data_sources.list_all())
 
-    for s in ds:
-        print(s)
-
     rows = []
     for d in ds:
         rows.append([
