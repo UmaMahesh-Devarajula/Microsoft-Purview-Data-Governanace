@@ -1,7 +1,7 @@
 import sys
 from Collections.collections import collections
 from datasources.dataSources import dataSources
-from Metada.exportMetadata import exportmetadata
+from Metadata.exportMetadata import exportmetadata
 
 def datamap():    
         
