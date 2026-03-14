@@ -1,6 +1,6 @@
 import sys
 from Collections.collections import collections
-from dataSources.dataSources import dataSources
+from datasources.dataSources import dataSources
 
 def datamap():    
         
