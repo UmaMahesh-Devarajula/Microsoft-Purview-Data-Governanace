@@ -1,4 +1,4 @@
-# Microsoft Purview Data Governance Utility Kit 🚀
+# Microsoft Purview Data Governance 🚀
 
 Automating Microsoft Purview data governance operations using **REST APIs** and **Python SDK**.  
 ---
