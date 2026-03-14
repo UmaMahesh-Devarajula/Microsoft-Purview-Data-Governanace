@@ -1,4 +1,4 @@
-from PurviewSacnClient.purviewscanclient import get_purview_scan_client
+from PurviewScanClient.purviewscanclient import get_purview_scan_client
 
 def deletedatasource():
     ds_name = input("Enter Data source you want to delete: ")
