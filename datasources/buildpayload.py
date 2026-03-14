@@ -1,7 +1,7 @@
 import os
 import json
 from typing import Dict, List
-from datasources.datasources import SOURCE_TYPES
+from datasources.datasourcesProp import SOURCE_TYPES
 # from datasources.datasources import COMMON_PROPERTIES
 # from datasources.datasources import PARSED_FIELDS
 
