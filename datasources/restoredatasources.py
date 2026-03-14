@@ -5,7 +5,7 @@ from PurviewScanClient.purviewscanclient import get_purview_scan_client
 
 def restoredatasources():
     client = get_purview_scan_client()
-    filepath = input("Enter file path")
+    filepath = input("Enter file path: ")
 
     try:
         with open(filepath, 'r') as f:
