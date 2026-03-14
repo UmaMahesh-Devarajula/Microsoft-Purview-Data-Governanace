@@ -29,6 +29,7 @@ This project shows how to:
 - **Create Purview Account**
 - **Data Map - Collections**
     - **Create or Update Collection**
+    - **Delete Collection**
     - **List Collections**
     - **Export Collections info into CSV**
     - **Restore Collections from CSV**
@@ -36,7 +37,8 @@ This project shows how to:
 - **Data Map - Data Sources**
   - **Register a Data Source**
   - **Delete a Data Sources**
-  - **Export DataSources Info into JSON**
+  - **List Data Sources**
+  - **Export DataSources to a JSON file**
   - **Restore DataSources from JSON file**
   - **!comming soon!**
       - **Create Scan**
